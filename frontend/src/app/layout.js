@@ -1,8 +1,6 @@
-import "./globals.css";
-
 export const metadata = {
-  title: "MediFind",
-  description: "Find medicines available at nearby pharmacies",
+  title: 'MediFind',
+  description: 'Find and order medicine near you',
 };
 
 export default function RootLayout({ children }) {
