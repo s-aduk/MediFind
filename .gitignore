@@ -1,7 +1,5 @@
-# Node
+# Node & Next.js
 node_modules/
-
-# Next.js
 .next/
 out/
 
@@ -11,18 +9,20 @@ __pycache__/
 .venv/
 venv/
 
-# AWS SAM
+# AWS SAM & Credentials
 .aws-sam/
 samconfig.toml
+.aws/
+*.pem
 
 # Environment Variables
 .env
 .env.local
 
-# IDE
+# IDE & Editor
 .vscode/
 .idea/
 
-# OS
+# Operating System
 .DS_Store
 Thumbs.db

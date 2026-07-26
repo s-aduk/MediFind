@@ -12,8 +12,7 @@ A cloud-native platform for helping users find medicines available in pharmacies
 
 ## System Architecture
 
-<img width="304" height="720" alt="MediFind Architecture" src="https://github.com/user-attachments/assets/f9a40f9f-cb1a-4869-858f-d4e8d4e5e640" />
-
+![MediFind System Architecture](./docs/architecture.png)
 ## Overview
 
 **MediFind** is a cloud-based drug availability platform that helps users quickly find medicines available in nearby pharmacies.
