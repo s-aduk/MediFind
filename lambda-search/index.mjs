@@ -1,68 +1,55 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { randomUUID } from "crypto"; // Built into Node.js 14.x+
 
-// Initialize the DynamoDB Client
-const client = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" });
+const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
-const TABLE_NAME = process.env.TABLE_NAME || "Inventory";
-
 export const handler = async (event) => {
-  console.log("Received event:", JSON.stringify(event, null, 2));
-
   try {
-    // 1. Parse body
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    const { drugName, maxPrice } = body;
+    const body = JSON.parse(event.body || '{}');
 
-    // 2. Scan DynamoDB for matching medicine_name
-    const command = new ScanCommand({
-      TableName: TABLE_NAME,
-      FilterExpression: "contains(#name, :searchName)",
-      ExpressionAttributeNames: {
-        "#name": "medicine_name",
-      },
-      ExpressionAttributeValues: {
-        ":searchName": drugName,
-      },
+    // 1. Generate a clean, unique orderId
+    // Generates something like: "ORD-a1b2c3d4"
+    const generatedOrderId = `ORD-${randomUUID().substring(0, 8)}`;
+
+    // 2. Build the item object
+    const newInventoryItem = {
+      pharmacyId: body.pharmacyId || "PHARM-101", // Your Primary Key
+      orderId: generatedOrderId,                  // Your new regular field!
+      medicineName: body.medicineName || "Aspirin",
+      quantity: body.quantity || 1,
+      updatedAt: new Date().toISOString()
+    };
+
+    // 3. Write/Update the item in your DynamoDB table
+    const command = new PutCommand({
+      TableName: "Inventory", // Your table name
+      Item: newInventoryItem
     });
 
-    const dbResult = await docClient.send(command);
-    let items = dbResult.Items || [];
+    await docClient.send(command);
 
-    // Optional: Filter by maxPrice in memory
-    if (maxPrice) {
-      items = items.filter((item) => item.price <= maxPrice);
-    }
-
-    // 3. Return HTTP response
+    // 4. Return the complete saved record back to the frontend
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        success: true,
-        count: items.length,
-        results: items,
-      }),
+        message: "Order updated successfully!",
+        data: newInventoryItem // Frontend receives the actual orderId!
+      })
     };
-  } catch (error) {
-    console.error("Error executing search:", error);
 
+  } catch (error) {
     return {
       statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        success: false,
-        message: "Internal server error during drug search.",
-        error: error.message,
-      }),
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({ error: error.message })
     };
   }
 };
