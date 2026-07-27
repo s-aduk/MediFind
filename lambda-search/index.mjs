@@ -1,68 +1,51 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
-// Initialize the DynamoDB Client
-const client = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" });
+const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
-const TABLE_NAME = process.env.TABLE_NAME || "Inventory";
-
 export const handler = async (event) => {
-  console.log("Received event:", JSON.stringify(event, null, 2));
-
   try {
-    // 1. Parse body
-    const body = typeof event.body === "string" ? JSON.parse(event.body) : event.body;
-    const { drugName, maxPrice } = body;
+    // 1. Get search term passed from React query string (e.g., ?medicineName=paracetamol)
+    const medicineName = 
+      event.queryStringParameters?.medicineName || 
+      event.queryStringParameters?.medicineId || 
+      "";
 
-    // 2. Scan DynamoDB for matching medicine_name
     const command = new ScanCommand({
-      TableName: TABLE_NAME,
-      FilterExpression: "contains(#name, :searchName)",
-      ExpressionAttributeNames: {
-        "#name": "medicine_name",
-      },
-      ExpressionAttributeValues: {
-        ":searchName": drugName,
-      },
+      TableName: "Inventory"
     });
 
-    const dbResult = await docClient.send(command);
-    let items = dbResult.Items || [];
+    // 2. Scan all items from DynamoDB Inventory
+    const response = await docClient.send(command);
+    let items = response.Items || [];
 
-    // Optional: Filter by maxPrice in memory
-    if (maxPrice) {
-      items = items.filter((item) => item.price <= maxPrice);
+    // 3. Filter items in Node.js (case-insensitive search)
+    if (medicineName) {
+      const searchLower = medicineName.toLowerCase();
+      items = items.filter(item => {
+        const medName = item.medicineName || item.medicine_name || "";
+        return medName.toLowerCase().includes(searchLower);
+      });
     }
 
-    // 3. Return HTTP response
+    // 4. Return matching items (including price, pharmacy_id, quantity) to React
     return {
       statusCode: 200,
       headers: {
-        "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        success: true,
-        count: items.length,
-        results: items,
-      }),
+      body: JSON.stringify(items)
     };
-  } catch (error) {
-    console.error("Error executing search:", error);
 
+  } catch (error) {
     return {
       statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-      },
-      body: JSON.stringify({
-        success: false,
-        message: "Internal server error during drug search.",
-        error: error.message,
-      }),
+      headers: { "Access-Control-Allow-Origin": "*" },
+      body: JSON.stringify({ error: error.message })
     };
   }
 };

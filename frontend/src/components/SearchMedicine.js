@@ -48,19 +48,23 @@ export default function SearchMedicine({ onSelectMedicine }) {
       {error && <p className="text-red-500 mt-2">{error}</p>}
 
       <ul className="mt-4">
-        {results.map((item) => (
-          <li key={item.medicineId} className="border p-3 mb-2 rounded">
-            <h3 className="font-bold">{item.name}</h3>
-            <p>Generic: {item.genericName}</p>
-            <p>Strength: {item.strength}</p>
-            <button
-              onClick={() => onSelectMedicine(item.medicineId)}
-              className="bg-green-500 text-white p-1 rounded mt-2"
-            >
-              View Pharmacies
-            </button>
-          </li>
-        ))}
+        {pharmacies.map((pharm, index) => {
+          const pId = pharm.pharmacyId || pharm.pharmacy_id || index;
+          return (
+            <li key={pId} className="border p-3 mb-2 rounded">
+              <h3 className="font-bold">{pharm.name || pharm.pharmacyName || 'Pharmacy'}</h3>
+              {pharm.address && <p>{pharm.address}</p>}
+              {pharm.price !== undefined && <p>Price: ${pharm.price}</p>}
+              <p>Stock: {pharm.stock ?? pharm.quantity ?? 'Available'} units</p>
+              <button
+                onClick={() => onOrder(pharm)}
+                className="bg-blue-500 text-white p-2 rounded mt-2"
+              >
+                Order Now
+              </button>
+            </li>
+          );
+        })}
       </ul>
 
       {results.length === 0 && !loading && query && (
