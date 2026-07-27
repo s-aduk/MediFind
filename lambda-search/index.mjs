@@ -1,36 +1,35 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
-import { randomUUID } from "crypto"; // Built into Node.js 14.x+
+import { DynamoDBDocumentClient, ScanCommand } from "@aws-sdk/lib-dynamodb";
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
 export const handler = async (event) => {
   try {
-    const body = JSON.parse(event.body || '{}');
+    // 1. Get search term passed from React query string (e.g., ?medicineName=paracetamol)
+    const medicineName = 
+      event.queryStringParameters?.medicineName || 
+      event.queryStringParameters?.medicineId || 
+      "";
 
-    // 1. Generate a clean, unique orderId
-    // Generates something like: "ORD-a1b2c3d4"
-    const generatedOrderId = `ORD-${randomUUID().substring(0, 8)}`;
-
-    // 2. Build the item object
-    const newInventoryItem = {
-      pharmacyId: body.pharmacyId || "PHARM-101", // Your Primary Key
-      orderId: generatedOrderId,                  // Your new regular field!
-      medicineName: body.medicineName || "Aspirin",
-      quantity: body.quantity || 1,
-      updatedAt: new Date().toISOString()
-    };
-
-    // 3. Write/Update the item in your DynamoDB table
-    const command = new PutCommand({
-      TableName: "Inventory", // Your table name
-      Item: newInventoryItem
+    const command = new ScanCommand({
+      TableName: "Inventory"
     });
 
-    await docClient.send(command);
+    // 2. Scan all items from DynamoDB Inventory
+    const response = await docClient.send(command);
+    let items = response.Items || [];
 
-    // 4. Return the complete saved record back to the frontend
+    // 3. Filter items in Node.js (case-insensitive search)
+    if (medicineName) {
+      const searchLower = medicineName.toLowerCase();
+      items = items.filter(item => {
+        const medName = item.medicineName || item.medicine_name || "";
+        return medName.toLowerCase().includes(searchLower);
+      });
+    }
+
+    // 4. Return matching items (including price, pharmacy_id, quantity) to React
     return {
       statusCode: 200,
       headers: {
@@ -39,10 +38,7 @@ export const handler = async (event) => {
         "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        message: "Order updated successfully!",
-        data: newInventoryItem // Frontend receives the actual orderId!
-      })
+      body: JSON.stringify(items)
     };
 
   } catch (error) {
