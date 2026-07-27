@@ -1,3 +1,4 @@
+import { Amplify } from 'aws-amplify';
 import {
   signUp as amplifySignUp,
   signIn as amplifySignIn,
