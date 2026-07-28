@@ -17,6 +17,7 @@
 
 - [Overview](#overview)
 - [Architecture Diagram](#architecture-diagram)
+- [Data Flow Diagram](#data-flow-diagram)
 - [✨ Features](#features)
 - [🛠️ Tech Stack](#tech-stack)
 - [🚀 Getting Started](#getting-started)
@@ -81,6 +82,59 @@ flowchart LR
 ```
 
 *Diagram shows data flow from the Next.js frontend through API Gateway to Lambda functions that interact with DynamoDB. Observability is provided by CloudWatch and AWS X‑Ray.*
+
+## Data Flow Diagram
+
+```mermaid
+sequenceDiagram
+    participant User as Patient/User
+    participant FE as Frontend (Next.js)
+    participant AG as API Gateway
+    participant Auth as Cognito Authorizer
+    participant LS as Lambda Search
+    participant LP as Lambda Pharmacies
+    participant LO as Lambda Orders
+    participant DB as DynamoDB
+    participant CW as CloudWatch
+
+    User->>FE: Open app / search medicine
+    FE->>FE: Render UI
+    FE->>AG: GET /search?q=paracetamol
+    AG->>Auth: Validate JWT (if present)
+    Auth-->>AG: Allow / Deny
+    AG->>LS: Invoke MedicineSearch Lambda
+    LS->>DB: Query medicines (GSI)
+    DB-->>LS: Return matches
+    LS-->>AG: JSON response (medicine list)
+    AG-->>FE: Return data
+    FE->>FE: Display results
+    User->>FE: Click pharmacy card
+    FE->>AG: GET /pharmacies?medicineId=123
+    AG->>Auth: Validate JWT
+    Auth-->>AG: Allow
+    AG->>LP: Invoke GetPharmacies Lambda
+    LP->>DB: Query pharmacies for medicine
+    DB-->>LP: Return pharmacy list with stock/price
+    LP-->>AG: JSON response
+    AG-->>FE: Return pharmacy data
+    FE->>FE: Show pharmacy list with price/stock/distance
+    User->>FE: Click "Order Now"
+    FE->>FE: Collect order data (quantity, pharmacy)
+    FE->>AG: POST /orders (with JWT)
+    AG->>Auth: Validate JWT
+    Auth-->>AG: Allow
+    AG->>LO: Invoke CreateOrder Lambda
+    LO->>DB: Validate stock & create order record
+    DB-->>LO: Order created, decrement stock
+    LO-->>AG: Order confirmation + orderId
+    AG-->>FE: Return success
+    FE->>FE: Show order confirmation
+    LO->>CW: Log metrics (order placed, latency)
+    LS->>CW: Log search metrics
+    LP->>CW: Log pharmacy lookup metrics
+```
+
+*Sequence diagram illustrates a typical user flow: searching a medicine, viewing pharmacy options, and placing an order, with authentication, Lambda invocations, DynamoDB interactions, and observability.*
 
 ---
 
@@ -254,8 +308,8 @@ MediFind/
 │   ├── adr/                  # Architecture Decision Records
 │   └── runbooks/             # Operational procedures (deployment, rollback, seeding, etc.)
 ├── .github/
-│   └── workflows/
-│       └── deploy.yml        # GitHub Actions CI/CD
+│   └─ workflows/
+│       └─ deploy.yml        # GitHub Actions CI/CD
 ├── .env.example              # template for environment variables
 ├── .gitignore                # ignore patterns for repo
 ├── LICENSE                   # MIT licence
