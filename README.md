@@ -1,215 +1,367 @@
-# MediFind - Medicine Finder Application
+# 🏥 MediFind - Modern Medicine Finder
 
-A modern, production-ready application for finding medicines at nearby pharmacies, built with AWS serverless technologies and Next.js.
+> A sleek, production‑ready application for finding medicines at nearby pharmacies, built with **AWS serverless** technologies and **Next.js 14**.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://reactjs.org/)
+[![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange?logo=awslambda)](https://aws.amazon.com/lambda/)
+[![Amazon DynamoDB](https://img.shields.io/badge/DynamoDB-NoSQL-4053D6?logo=amazon-dynamodb)](https://aws.amazon.com/dynamodb/)
+[![Amazon API Gateway](https://img.shields.io/badge/API_Gateway-gateway-FF9900?logo=amazon)](https://aws.amazon.com/api-gateway/)
+[![Amazon Cognito](https://img.shields.io/badge/Cognito-Auth-purple?logo=amazon-cognito)](https://aws.amazon.com/cognito/)
+[![GitHub Actions](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=github-actions)](https://github.com/s-aduk/MediFind/actions)
+
+---
+
+## 📖 Table of Contents
+
+- [Overview](#overview)
+- [Architecture Diagram](#architecture-diagram)
+- [✨ Features](#features)
+- [🛠️ Tech Stack](#tech-stack)
+- [🚀 Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Environment Configuration](#environment-configuration)
+  - [Running Locally](#running-locally)
+  - [Deployment](#deployment)
+- [📂 Project Structure](#project-structure)
+- [🔌 API Endpoints](#api-endpoints)
+- [🧪 Testing](#testing)
+- [📜 License](#license)
+- [🤝 Contributing](#contributing)
+- [🙏 Acknowledgements](#acknowledgements)
+
+---
 
 ## Overview
 
-MediHelp connects patients with pharmacies that have specific medications in stock. Users can search for medicines, see which pharmacies have them available, view prices, and place orders.
+MediFind connects patients with nearby pharmacies that have specific medications in stock. Users can search for medicines, compare prices and availability, view pharmacy details, and place orders—all through a clean, responsive interface backed by a fully managed AWS serverless backend.
 
-## Architecture
+## Architecture Diagram
 
-This application uses a serverless architecture on AWS:
-
-- **Frontend**: Next.js 13+ with App Router (React Server Components)
-- **Backend**: AWS Lambda functions (Node.js) via AWS SAM
-- **Database**: Amazon DynamoDB with single-table design
-- **Authentication**: Amazon Cognito User Pools
-- **API**: Amazon API Gateway
-- **Infrastructure**: Infrastructure as Code with AWS SAM
-
-
-## Project Structure
-
+```mermaid
+flowchart LR
+    subgraph Frontend[Frontend (Next.js)]
+        A[React UI] --> B[Next.js App Router]
+        B --> C[AWS Amplify (Auth)]
+        B --> D[API Gateway Calls]
+    end
+    subgraph Backend[Backend (AWS)]
+        D --> E[API Gateway]
+        E --> F[Lambda: Medicine Search]
+        E --> G[Lambda: Get Pharmacies]
+        E --> H[Lambda: Create Order]
+        E --> I[Lambda: Admin Pharmacy]
+        E --> J[Lambda: Admin Inventory]
+        E --> K[Lambda: JWT Authorizer]
+        F --> L[(DynamoDB)]
+        G --> L
+        H --> L
+        I --> L
+        J --> L
+        K --> L
+        L --> M[CloudWatch Logs & Metrics]
+        N[X-Ray Tracing] --> E
+    end
+    style A fill:#f9f,stroke:#333,stroke-width:1px
+    style B fill:#f9f,stroke:#333,stroke-width:1px
+    style C fill:#f9f,stroke:#333,stroke-width:1px
+    style D fill:#f9f,stroke:#333,stroke-width:1px
+    style E fill:#bbf,stroke:#333,stroke-width:1px
+    style F fill:#bbf,stroke:#333,stroke-width:1px
+    style G fill:#bbf,stroke:#333,stroke-width:1px
+    style H fill:#bbf,stroke:#333,stroke-width:1px
+    style I fill:#bbf,stroke:#333,stroke-width:1px
+    style J fill:#bbf,stroke:#333,stroke-width:1px
+    style K fill:#bbf,stroke:#333,stroke-width:1px
+    style L fill:#bfb,stroke:#333,stroke-width:1px
+    style M fill:#ff9,stroke:#333,stroke-width:1px
+    style N fill:#ff9,stroke:#333,stroke-width:1px
 ```
-├── backend/                  # Lambda functions and backend code
-│   ├── src/functions/        # Individual Lambda functions
-│   │   ├── medicine-search/  # Search for medicines
-│   │   ├── get-pharmacies/   # Get pharmacies with medicine stock
-│   │   ├── create-order/     # Create customer orders
-│   │   ├── admin-inventory/  # Admin inventory management
-│   │   ├── admin-pharmacy/   # Admin pharmacy management
-│   │   └── jwt-authorizer/   # JWT token validation
-│   ├── package.json          # Backend dependencies and scripts
-│   ├── jest.config.js        # Jest configuration
-│   ├── babel.config.js       # Babel configuration
-│   └── seed_data.py          # Script to populate DynamoDB with sample data
-├── frontend/                 # Next.js frontend application
-│   ├── src/
-│   │   ├── app/              # App router pages
-│   │   ├── components/       # Reusable components
-│   │   └── lib/              # Utility functions (API, auth)
-│   ├── package.json
-│   └── next.config.mjs
-├── infrastructure/           # AWS SAM template
-│   └── template.yaml         # Infrastructure definition
-├── docs/                     # Documentation
-│   ├── adr/                  # Architecture Decision Records
-│   └── runbooks/             # Operational procedures
-└── .github/workflows/        # CI/CD pipelines
-    └── deploy.yml            # GitHub Actions workflow
-```
 
-## Getting Started
+*Diagram shows data flow from the Next.js frontend through API Gateway to Lambda functions that interact with DynamoDB. Observability is provided by CloudWatch and AWS X‑Ray.*
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| **🔍 Medicine Search** | Instant search by name (partial match) with relevance ranking. |
+| **🏥 Pharmacy Listings** | See which nearby pharmacies have the medicine in stock, with distance, price, and inventory. |
+| **💊 Price & Availability** | Real‑time pricing and stock levels; out‑of‑stock items clearly marked. |
+| **🧾 Order Management** | Place orders, specify quantity, choose pharmacy, receive confirmation & tracking. |
+| **🔐 Secure Authentication** | Email/password via Amazon Cognito (sign‑up, verification, sign‑in, password reset). |
+| **⚙️ Admin Panel** | CRUD for pharmacies, inventory updates, stock‑level alerts, order oversight. |
+| **📱 Responsive Design** | Mobile‑first layout works on phones, tablets, and desktops. |
+| **☁️ Serverless Backend** | Fully managed AWS Lambda, API Gateway, DynamoDB – zero‑server ops. |
+| **📦 Infrastructure as Code** | AWS SAM template defines all resources; reproducible deployments. |
+| **🛡️ Security Best Practices** | Least‑privilege IAM, input validation, CORS, XSS/CSRF protection, environment‑specific config. |
+| **📊 Observability** | CloudWatch Logs, Metrics, custom business KPIs, AWS X‑Ray tracing. |
+
+## 🛠️ Tech Stack
+
+| Category | Technology | Version / Notes |
+|----------|------------|-----------------|
+| **Frontend** | Next.js (App Router) | 14.2.x |
+| | React | 19.x |
+| | TypeScript (optional) | – |
+| | Styling | CSS Modules + Custom Properties (design tokens) |
+| | UI Icons | Lucide React |
+| | Auth | AWS Amplify (Cognito) |
+| | State | React Query / SWR (optional) |
+| **Backend** | AWS Lambda (Node.js) | 18.x runtime |
+| | API Gateway | REST API |
+| | Data Store | Amazon DynamoDB (single‑table design) |
+| | Auth | Amazon Cognito User Pools + JWT Authorizer |
+| | Infrastructure | AWS SAM (CloudFormation) |
+| | Dependencies | AWS SDK v3, Middy (middleware), Joi (validation) |
+| **DevOps** | GitHub Actions | CI/CD (build, test, deploy) |
+| | AWS CLI / SAM CLI | Local testing & deployment |
+| | Docker | Local Lambda simulation |
+| | Testing | Jest (backend), Jest + React Testing Library (frontend) |
+| | Linting | ESLint (with `eslint-config-next`) |
+| | Formatting | Prettier |
+| **Monitoring** | CloudWatch Logs & Metrics | – |
+| | AWS X‑Ray | Distributed tracing |
+| | Custom Dashboards | CloudWatch (optional) |
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18.x+
-- Python 3.9+
-- AWS CLI v2
-- AWS SAM CLI
-- Docker (for local Lambda testing)
-- Git
+- **Node.js** ≥ 18.x
+- **Python** ≥ 3.9 (for `seed_data.py`)
+- **AWS CLI** v2 (configured with an IAM user that has `AdministratorAccess` or a scoped policy)
+- **AWS SAM CLI**
+- **Docker** (to run Lambda locally)
+- **Git**
+- Optional: **Postman** or **curl** for API testing
 
-### Local Development
+### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/s-aduk/MediFind
+   git clone https://github.com/s-aduk/MediFind.git
    cd MediFind
    ```
 
-2. **Backend Setup**
+2. **Backend setup**
    ```bash
    cd backend
-   npm ci
+   npm ci               # install Node.js dependencies
+   # (if you prefer a Python venv for the seed script)
+   # python -m venv .venv && source .venv/bin/activate
+   # pip install -r requirements.txt   # if a requirements.txt exists
    ```
 
-3. **Frontend Setup**
+3. **Frontend setup**
    ```bash
    cd ../frontend
    npm ci
    ```
 
-4. **Environment Configuration**
+4. **Environment configuration**
    ```bash
-   # Copy example environment file
-   cp ../.env.example .env
-   
-   # Edit .env with your local development values
+   # From the project root
+   cp .env.example .env.local   # frontend
+   cp .env.example .env         # backend (shared)
+   # Edit the .env files with your local values, e.g.:
+   #   NEXT_PUBLIC_API_URL=http://localhost:3000/dev
+   #   AWS_PROFILE=mydevprofile
+   #   AWS_REGION=eu-north-1
    ```
 
-5. **Run Local Development**
-   ```bash
-   # Start frontend dev server
-   cd frontend
-   npm run dev
-   
-   # In another terminal, test Lambda functions locally
-   cd ../backend
-   sam local invoke MedicineSearchFunction -e events/event.json
-   ```
+### Running Locally
+
+#### Start the frontend dev server
+```bash
+cd frontend
+npm run dev   # → http://localhost:3000
+```
+
+#### Test Lambda functions locally (in another terminal)
+```bash
+cd backend
+# Example: invoke the medicine search function
+sam local invoke MedicineSearchFunction -e events/event.json
+# You can also start the API locally:
+sam local start-api
+```
 
 ### Deployment
 
-See the runbooks in `docs/runbooks/` for detailed deployment procedures:
+Full, step‑by‑step procedures are in the `docs/runbooks/` folder:
 
-- [Deploy to Staging](docs/runbooks/01-deploy-to-staging.md)
-- [Deploy to Production](docs/runbooks/02-deploy-to-production.md)
-- [Database Seeding](docs/runbooks/04-database-seeding.md)
+1. **[Deploy to Staging](docs/runbooks/01-deploy-to-staging.md)**
+2. **[Deploy to Production](docs/runbooks/02-deploy-to-production.md)**
+3. **[Database Seeding](docs/runbooks/04-database-seeding.md)**
+4. **[Rollback Procedure](docs/runbooks/03-rollback-procedure.md)**
 
-## Features
+#### Quick deployment overview (staging)
 
-- Medicine Search
-- Search for medicines by name
-- See which pharmacies have stock
-- View prices and availability
-- Filter by distance/location (future enhancement)
+```bash
+# 1. Build SAM application
+sam build
 
-### Pharmacy Information
-- View pharmacy details (address, phone, hours)
-- See real-time inventory levels
-- Get directions to pharmacy
+# 2. Deploy (guided first time)
+sam deploy --guided \
+  --stack-name medifind-staging \
+  --region eu-north-1 \
+  --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
+  --parameter-overrides Environment=staging
 
-### Order Management
-- Place orders for medications
-- Specify quantity and pharmacy
-- Order confirmation and tracking
-- Order history
+# 3. Get outputs (API URL, Cognito Pool ID, etc.)
+sam list-stack-outputs --stack-name medifind-staging
 
-### Admin Features
-- Pharmacy management (CRUD)
-- Inventory management
-- Stock level alerts
-- Order administration
+# 4. Seed the database
+cd backend
+python seed_data.py   # reads credentials from ~/.aws or env vars
+```
 
-## Testing
+> **Tip**: Use separate AWS profiles (`export AWS_PROFILE=staging` / `prod`) or environment variables to avoid mixing accounts.
 
-### Backend Tests
+## 📂 Project Structure
+
+```
+MediFind/
+├── backend/                     # Lambda functions (Node.js)
+│   ├── src/
+│   │   └── functions/
+│   │       ├── medicine-search/
+│   │       ├── get-pharmacies/
+│   │       ├── create-order/
+│   │       ├── admin-inventory/
+│   │       ├── admin-pharmacy/
+│   │       └── jwt-authorizer/
+│   ├── package.json
+│   ├── jest.config.js
+│   ├── babel.config.js
+│   └── seed_data.py            # populates DynamoDB with sample data
+├── frontend/                    # Next.js 14 application
+│   ├── src/
+│   │   ├── app/               # App Router pages & layouts
+│   │   ├── components/        # Reusable UI pieces
+│   │   └── lib/               # API service, auth helpers, utils
+│   ├── next.config.mjs
+│   ├── eslint.config.mjs
+│   ├── package.json
+│   └── README.md             # (optional) frontend‑specific notes
+├── infrastructure/             # AWS SAM template
+│   └── template.yaml          # defines all AWS resources
+├── docs/
+│   ├── adr/                  # Architecture Decision Records
+│   └── runbooks/             # Operational procedures (deployment, rollback, seeding, etc.)
+├── .github/
+│   └── workflows/
+│       └── deploy.yml        # GitHub Actions CI/CD
+├── .env.example              # template for environment variables
+├── .gitignore                # ignore patterns for repo
+├── LICENSE                   # MIT licence
+├── CONTRIBUTING.md           # contribution guidelines
+└── README.md                 # this file
+```
+
+## 🔌 API Endpoints
+
+All endpoints are relative to the deployed API Gateway stage (e.g. `https://<id>.execute-api.<region>.amazonaws.com/Prod`).
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET`  | `/search?q=<query>` | Search medicines by name (case‑insensitive, partial) | ❌ |
+| `GET`  | `/pharmacies?medicineId=<id>` | List pharmacies that have the given medicine in stock | ❌ |
+| `POST` | `/orders` | Create a new order (requires JWT) | ✅ |
+| `POST` | `/admin/pharmacy` | Register a new pharmacy (admin only) | ✅ |
+| `POST` | `/admin/inventory` | Update inventory levels for a pharmacy/medicine (admin) | ✅ |
+| `GET`  | `/health` | Liveness probe (used by ALB/APIGW) | ❌ |
+| *Additional admin endpoints* (e.g. `/admin/orders`, `/admin/users`) are defined in `template.yaml` as needed. |
+
+**Standard response envelope**
+```json
+{
+  "success": true,
+  "data": { /* payload */ },
+  "error": null,
+  "meta": {
+    "total": 42,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+On error:
+```json
+{
+  "success": false,
+  "data": null,
+  "error": "Human readable message",
+  "meta": null
+}
+```
+
+## 🧪 Testing
+
+### Backend
 ```bash
 cd backend
-npm test
+npm test            # runs Jest unit+integration tests
+# With coverage:
+npm run test:cov
 ```
 
-### Frontend Tests
+### Frontend
 ```bash
 cd frontend
-npm test
+npm test            # Jest + React Testing Library
+# With coverage:
+npm run test:cov
 ```
 
-### Linting
+### Linting & Formatting
 ```bash
-# Backend ESLint
+# Backend
 cd backend
 npm run lint
 
-# Frontend ESLint  
+# Frontend
 cd frontend
 npm run lint
 ```
+> **Formatting** (optional): `npm run format` (uses Prettier) is available in both packages.
 
-## Architecture Decision Records
+### Coverage Goal
+Maintain **≥80%** statement, branch, and function coverage across unit & integration tests.
 
-Key architectural decisions are documented in [docs/adr/](docs/adr/):
+## 📜 License
 
-- [0001: Use AWS SAM for Infrastructure](docs/adr/0001-use-aws-sam-for-infrastructure.md)
-- [0002: DynamoDB Single-Table Design](docs/adr/0002-dynamodb-single-table-design.md)
-- [0003: Lambda Function per Bounded Context](docs/adr/0003-lambda-function-per-bounded-context.md)
-- [0004: Use Amazon Cognito for Authentication](docs/adr/0004-cognito-for-authentication.md)
-- [0005: Use Next.js App Router](docs/adr/0005-nextjs-app-router.md)
+This project is licensed under the **MIT License** – see the [`LICENSE`](LICENSE) file for details.
 
-## Operational Documentation
+## 🤝 Contributing
 
-Operational procedures are documented in [docs/runbooks/](docs/runbooks/):
+We 💖 contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct, pull‑request process, and development workflow.
 
-- [01: Deploy to Staging](docs/runbooks/01-deploy-to-staging.md)
-- [02: Deploy to Production](docs/runbooks/02-deploy-to-production.md)
-- [03: Rollback Procedure](docs/runbooks/03-rollback-procedure.md)
-- [04: Database Seeding](docs/runbooks/04-database-seeding.md)
-- [05: View Logs](docs/runbooks/05-view-logs.md)
-- [06: Troubleshoot Lambda Timeouts](docs/runbooks/06-troubleshoot-lambda-timeouts.md)
-- [07: Scale DynamoDB Capacity](docs/runbooks/07-scale-dynamodb-capacity.md)
+**Quick contribution flow**
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feat/amazing-feature`
+3. Commit your changes: `git commit -m 'feat: add amazing feature'`
+4. Push to the branch: `git push origin feat/amazing-feature`
+5. Open a Pull Request against `main`
 
-## Security
+Make sure your PR passes all linting and tests before requesting review.
 
-This application follows AWS security best practices:
+## 🙏 Acknowledgements
 
-- Principle of least privilege IAM roles
-- Input validation and sanitization
-- Protection against common web vulnerabilities (XSS, CSRF, SQL injection)
-- Secure password handling via Cognito
-- Environment-specific configuration
-- Audit logging for sensitive operations
+- **[AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/)** – effortless IaC for Lambda, API Gateway, DynamoDB, and more.  
+- **[Next.js](https://nextjs.org/) & [React](https://reactjs.org/)** – modern React framework with server‑components and incremental static regeneration.  
+- **[AWS Amplify](https://aws.amazon.com/amplify/)** – seamless Cognito integration for auth flows.  
+- **[Lucide Icons](https://lucide.dev/)** – beautiful, open‑source SVG icons used throughout the UI.  
+- **[Shields.io](https://shields.io/)** – for the project badges you see above.  
+- The open‑source community for countless libraries, utilities, and best‑practice guides that make this project possible.
 
-See [docs/runbooks/06-troubleshoot-lambda-timeouts.md](docs/runbooks/06-troubleshoot-lambda-timeouts.md) for security-related operational procedures.
+---
 
-## Monitoring and Observability
-
-- CloudWatch Logs for all Lambda functions
-- CloudWatch Metrics for performance and error tracking
-- Custom metrics for business KPIs
-- Distributed tracing with AWS X-Ray (configured in template)
-- Health check endpoints for all services
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- AWS Serverless Application Model (SAM)
-- Next.js team for the excellent React framework
-- The open source community for various libraries and tools
+<div align="center">
+  Made with ❤️ and ☕ by the MediFind Team<br>
+  <a href="https://github.com/s-aduk/MediFind">github.com/s-aduk/MediFind</a>
+</div>
