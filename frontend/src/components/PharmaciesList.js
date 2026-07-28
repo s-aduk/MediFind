@@ -1,6 +1,8 @@
+'use client';
+
 import { useEffect, useState } from 'react';
 import { getPharmaciesForMedicine } from '../lib/api';
-import { ArrowRight, MapPin, Pill, Rx } from 'lucide-react';
+import { ArrowRight, MapPin, Pill, PillBottle } from 'lucide-react';
 
 export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
   const [pharmacies, setPharmacies] = useState([]);
@@ -18,7 +20,7 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
       setError('');
       try {
         const data = await getPharmaciesForMedicine(searchTerm);
-        setPharmacies(data);
+        setPharmacies(data.items || []);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -53,8 +55,8 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
 
       {pharmacies.length === 0 ? (
         <div className="text-center py-8">
-          <div className="w-12 h-12 mx-auto mb-3 bg-green-50 rounded-flex items-center justify-center">
-            <Rx className="h-6 w-6 text-green-400" />
+          <div className="w-12 h-12 mx-auto mb-3 bg-green-50 rounded-full flex items-center justify-center">
+            <PillBottle className="h-6 w-6 text-green-400" />
           </div>
           <p className="text-lg font-bold text-gray-900 mb-2">
             No pharmacies have this medicine in stock
@@ -75,7 +77,7 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      {pharm.name || pharm.pharmacyName || 'Pharmacy'}
+                      {pharm.pharmacy?.name || 'Pharmacy'}
                       <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                         Verified
                       </span>
@@ -83,14 +85,14 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">
-                      {pharm.distance?.toFixed(1) + '&apos; &#32;km&apos;'} || '&apos;Nearby&apos;'
+                      {pharm.distance ? pharm.distance.toFixed(1) + ' km' : 'Nearby'}
                     </span>
                   </div>
                 </div>
 
-                {pharm.address && (
+                {pharm.pharmacy?.address && (
                   <p className="text-gray-600 mb-2 flex items-center">
-                    <MapPin className="h-4 w-4 mr-2 text-green-500" /> {pharm.address}
+                    <MapPin className="h-4 w-4 mr-2 text-green-500" /> {pharm.pharmacy.address}
                   </p>
                 )}
 
@@ -102,19 +104,19 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
                     <div>
                       <p className="text-sm font-medium text-gray-900">Price</p>
                       <p className="text-lg font-bold text-gray-900">
-                        ${pharm.price?.toFixed(2) || 'Price on request'}
+                        {pharm.price ? `$${pharm.price.toFixed(2)}` : 'Price on request'}
                       </p>
                     </div>
                   </div>
 
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                     <div className="flex-shrink-0">
-                      <Rx className="h-4 w-4 text-green-500" />
+                      <PillBottle className="h-4 w-4 text-green-500" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">Stock</p>
                       <p className="text-lg font-bold">
-                        {pharm.stock ?? pharm.quantity > 0 ? (
+                        {(pharm.stock ?? pharm.quantity ?? 0) > 0 ? (
                           <span className="text-green-600">{pharm.stock ?? pharm.quantity} in stock</span>
                         ) : (
                           <span className="text-red-600">Out of stock</span>
@@ -132,7 +134,9 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
                     <div>
                       <p className="text-sm font-medium text-gray-900">Last Updated</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(pharm.last_updated || pharm.updated_at || new Date()).toLocaleDateString()}
+                        {pharm.last_updated || pharm.updated_at
+                          ? new Date(pharm.last_updated || pharm.updated_at).toLocaleDateString()
+                          : 'N/A'}
                       </p>
                     </div>
                   </div>

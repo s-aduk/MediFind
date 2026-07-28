@@ -33,23 +33,31 @@ Use the same commands as staging but with production parameters:
 ```bash
 cd infrastructure
 sam validate
-sam build
+
+sam package \
+    --s3-bucket $S3_BUCKET \
+    --output-template-file packaged.yaml \
+    --region $AWS_REGION \
+    --profile $AWS_PROFILE
 
 sam deploy \
+    --template-file packaged.yaml \
     --stack-name $STACK_NAME \
     --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-    --parameter-overrides EnvironmentName=prod \
-    --resolve-s3 \
-    --no-confirm-changeset \
+    --parameter-overrides \
+        Environment=production \
+        EnableWAF=true \
+        LoggingLevel=WARN \
+        AlarmNotificationEmail=ops-team@example.com \
     --region $AWS_REGION \
     --profile $AWS_PROFILE \
     --no-fail-on-empty-changeset \
-    --tags Environment=prod Team=medifind
+    --tags Environment=production Team=medifind
 ```
 
-### 3. Production-Specific Notes
-- Use `EnvironmentName=prod` (allowed values are `dev`, `staging`, or `prod`)
-- Review API Gateway CORS settings before go-live
+### 3. Production-Specific Parameters
+- EnableWAF=true (activate AWS WAF for production traffic)
+- LoggingLevel=WARN (reduce log volume and costs)
 - AlarmNotificationEmail=set to your operations team distribution list
 - Consider enabling provisioned concurrency for critical Lambda functions
 - Consider enabling DynamoDB auto-scaling with higher maximum capacity

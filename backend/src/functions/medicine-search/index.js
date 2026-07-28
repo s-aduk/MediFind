@@ -1,6 +1,6 @@
 // Medicine search Lambda - search for medicines in inventory
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, QueryCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, ScanCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
@@ -8,27 +8,10 @@ const docClient = DynamoDBDocumentClient.from(client);
 // Environment variables
 const INVENTORY_TABLE = process.env.INVENTORY_TABLE;
 const PHARMACIES_TABLE = process.env.PHARMACIES_TABLE;
-const USERS_TABLE = process.env.USERS_TABLE;
-
-// Common CORS headers
-const corsHeaders = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET,OPTIONS"
-};
 
 exports.handler = async (event) => {
   try {
     console.log('Received event:', JSON.stringify(event, null, 2));
-
-    if (event.path === '/health') {
-      return {
-        statusCode: 200,
-        headers: corsHeaders,
-        body: JSON.stringify({ status: 'ok' })
-      };
-    }
 
     // Extract query parameters
     const queryParams = event.queryStringParameters || {};
@@ -38,7 +21,12 @@ exports.handler = async (event) => {
     if (!medicineName || typeof medicineName !== 'string') {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,OPTIONS"
+        },
         body: JSON.stringify({
           error: 'Missing or invalid query parameter. Provide "q" parameter for medicine name.'
         })
@@ -50,43 +38,47 @@ exports.handler = async (event) => {
     if (searchTerm.length < 2) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,OPTIONS"
+        },
         body: JSON.stringify({
           error: 'Medicine name must be at least 2 characters long.'
         })
       };
     }
 
-    // Query the Inventory table using GSI_MedicineName for case-insensitive prefix match
-    // We query for exact match on lowercased medicine_name, then filter for contains if needed
-    // For partial match, we'll use Query with begins_with on the GSI
-    const queryParams = {
+    // Scan the Inventory table with a filter for case-insensitive partial match
+    const scanParams = {
       TableName: INVENTORY_TABLE,
-      IndexName: 'GSI_MedicineName',
-      KeyConditionExpression: 'medicine_name = :medicineName',
+      FilterExpression: "contains(#medicine_name, :searchTerm)",
+      ExpressionAttributeNames: {
+        "#medicine_name": "medicine_name"
+      },
       ExpressionAttributeValues: {
-        ':medicineName': searchTerm.toLowerCase()
+        ":searchTerm": searchTerm.toLowerCase()
       }
     };
 
     // Add pagination if limit is provided
     if (queryParams.limit) {
-      queryParams.Limit = parseInt(queryParams.limit);
+      scanParams.Limit = parseInt(queryParams.limit);
     }
     if (queryParams.exclusiveStartKey) {
-      queryParams.ExclusiveStartKey = JSON.parse(queryParams.exclusiveStartKey);
+      scanParams.ExclusiveStartKey = JSON.parse(queryParams.exclusiveStartKey);
     }
 
-    const response = await docClient.send(new QueryCommand(queryParams));
+    const response = await docClient.send(new ScanCommand(scanParams));
     const items = response.Items || [];
 
-    // If no exact match, we could do a broader search, but for now return exact matches
-    // Enrich results with pharmacy information
+    // Enrich results with pharmacy information if needed
     const enrichedResults = await Promise.all(
       items.map(async (item) => {
         try {
           // Get pharmacy details if pharmacy_id exists
-          if (item.pharmacy_id && PHARMACIES_TABLE) {
+          if (item.pharmacy_id) {
             const pharmacyResponse = await docClient.send(
               new GetCommand({
                 TableName: PHARMACIES_TABLE,
@@ -111,7 +103,12 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,OPTIONS"
+      },
       body: JSON.stringify({
         count: enrichedResults.length,
         items: enrichedResults,
@@ -123,7 +120,12 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 500,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,OPTIONS"
+      },
       body: JSON.stringify({
         error: 'Internal server error',
         message: process.env.NODE_ENV === 'development' ? error.message : undefined

@@ -1,24 +1,15 @@
-import boto3
 import os
+import boto3
 
-# Initialize DynamoDB resource
-# Use environment variables for table names, with defaults for local testing
-PHARMACIES_TABLE = os.environ.get('PHARMACIES_TABLE', 'Pharmacies')
-INVENTORY_TABLE = os.environ.get('INVENTORY_TABLE', 'Inventory')
-USERS_TABLE = os.environ.get('USERS_TABLE', 'Users')
-ORDERS_TABLE = os.environ.get('ORDERS_TABLE', 'Orders')
-AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+# Set ENVIRONMENT_NAME to match the EnvironmentName parameter used at deploy
+# time (default 'dev'), and AWS_REGION/AWS_DEFAULT_REGION to your deploy region.
+ENVIRONMENT_NAME = os.environ.get("ENVIRONMENT_NAME", "dev")
+REGION = os.environ.get("AWS_REGION", os.environ.get("AWS_DEFAULT_REGION", "us-east-1"))
 
-print(f"Seeding tables in region {AWS_REGION}:")
-print(f"  Pharmacies: {PHARMACIES_TABLE}")
-print(f"  Inventory: {INVENTORY_TABLE}")
-print(f"  Users: {USERS_TABLE}")
-print(f"  Orders: {ORDERS_TABLE}")
-
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+dynamodb = boto3.resource("dynamodb", region_name=REGION)
 
 # 1. Seed Pharmacies
-pharmacies_table = dynamodb.Table(PHARMACIES_TABLE)
+pharmacies_table = dynamodb.Table(f"{ENVIRONMENT_NAME}-pharmacies")
 pharmacies = [
     {
         "pharmacy_id": "PHARMACY_01",
@@ -58,7 +49,7 @@ with pharmacies_table.batch_writer() as batch:
         batch.put_item(Item=p)
 
 # 2. Seed Inventory (10 Medicines linked across the 5 Pharmacies)
-inventory_table = dynamodb.Table(INVENTORY_TABLE)
+inventory_table = dynamodb.Table(f"{ENVIRONMENT_NAME}-inventory")
 inventory = [
     {
         "medicine_name": "penicillin",
@@ -126,16 +117,5 @@ print("Seeding Inventory...")
 with inventory_table.batch_writer() as batch:
     for item in inventory:
         batch.put_item(Item=item)
-
-# 3. Seed a sample user
-users_table = dynamodb.Table(USERS_TABLE)
-print("Seeding Users...")
-with users_table.batch_writer() as batch:
-    batch.put_item(Item={
-        "user_id": "user-123",
-        "email": "patient@example.com",
-        "name": "John Doe",
-        "created_at": "2026-07-22T00:00:00Z"
-    })
 
 print("Done! Check your DynamoDB Console.")

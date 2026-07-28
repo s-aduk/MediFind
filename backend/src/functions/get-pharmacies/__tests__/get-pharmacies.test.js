@@ -1,32 +1,30 @@
 // __tests__/get-pharmacies.test.js
+
+// The mock must be wired up before the module under test is required, since
+// index.js constructs its DynamoDB client once at module load time.
+const mockSend = jest.fn();
+
+jest.mock("@aws-sdk/client-dynamodb", () => ({
+  DynamoDBClient: jest.fn().mockImplementation(() => ({ send: mockSend }))
+}));
+
+jest.mock("@aws-sdk/lib-dynamodb", () => ({
+  DynamoDBDocumentClient: {
+    from: jest.fn(() => ({ send: mockSend }))
+  },
+  ScanCommand: jest.fn((params) => params),
+  GetCommand: jest.fn((params) => params)
+}));
+
 const { handler } = require('../index');
 
-// Mock the DynamoDB client
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, ScanCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
-
-// Mock the AWS SDK clients
-jest.mock("@aws-sdk/client-dynamodb");
-jest.mock("@aws-sdk/lib-dynamodb");
-
 describe('Get Pharmacies Lambda', () => {
-  const mockSend = jest.fn();
-
   beforeEach(() => {
     process.env.INVENTORY_TABLE = 'test-inventory-table';
     process.env.PHARMACIES_TABLE = 'test-pharmacies-table';
-    process.env.USERS_TABLE = 'test-users-table';
 
-    // Clear all mocks before each test
     mockSend.mockReset();
-    DynamoDBClient.mockImplementation(() => {
-      return {
-        send: mockSend
-      };
-    });
-    DynamoDBDocumentClient.from = jest.fn().mockReturnValue({
-      send: mockSend
-    });
+    mockSend.mockResolvedValue({});
   });
 
   it('should return 400 for missing medicineName parameter', async () => {
@@ -49,7 +47,6 @@ describe('Get Pharmacies Lambda', () => {
       }
     };
 
-    // Mock the DynamoDB scan response
     mockSend.mockResolvedValueOnce({
       Items: [],
       Count: 0
@@ -70,18 +67,9 @@ describe('Get Pharmacies Lambda', () => {
       }
     };
 
-    // Mock the DynamoDB scan response with some items
     const mockItems = [
-      {
-        medicine_name: 'paracetamol',
-        pharmacy_id: 'PHARMACY_01',
-        quantity: 100
-      },
-      {
-        medicine_name: 'paracetamol',
-        pharmacy_id: 'PHARMACY_02',
-        quantity: 50
-      }
+      { medicine_name: 'paracetamol', pharmacy_id: 'PHARMACY_01', quantity: 100 },
+      { medicine_name: 'paracetamol', pharmacy_id: 'PHARMACY_02', quantity: 50 }
     ];
 
     mockSend.mockResolvedValueOnce({
@@ -104,7 +92,7 @@ describe('Get Pharmacies Lambda', () => {
       }
     };
 
-    // Mock the DynamoDB scan to throw an error
+    mockSend.mockReset();
     mockSend.mockRejectedValueOnce(new Error('DynamoDB error'));
 
     const response = await handler(event);

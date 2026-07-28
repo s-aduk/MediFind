@@ -1,31 +1,32 @@
 // __tests__/medicine-search.test.js
+
+// The mock must be wired up before the module under test is required, since
+// index.js constructs its DynamoDB client once at module load time.
+const mockSend = jest.fn();
+
+jest.mock("@aws-sdk/client-dynamodb", () => ({
+  DynamoDBClient: jest.fn().mockImplementation(() => ({ send: mockSend }))
+}));
+
+jest.mock("@aws-sdk/lib-dynamodb", () => ({
+  DynamoDBDocumentClient: {
+    from: jest.fn(() => ({ send: mockSend }))
+  },
+  ScanCommand: jest.fn((params) => params),
+  GetCommand: jest.fn((params) => params)
+}));
+
 const { handler } = require('../index');
 
-// Mock the DynamoDB client
-const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, ScanCommand } = require("@aws-sdk/lib-dynamodb");
-
-// Mock the AWS SDK clients
-jest.mock("@aws-sdk/client-dynamodb");
-jest.mock("@aws-sdk/lib-dynamodb");
-
 describe('Medicine Search Lambda', () => {
-  const mockSend = jest.fn();
-
   beforeEach(() => {
     process.env.INVENTORY_TABLE = 'test-inventory-table';
-    process.env.USERS_TABLE = 'test-users-table';
+    process.env.PHARMACIES_TABLE = 'test-pharmacies-table';
 
-    // Clear all mocks before each test
     mockSend.mockReset();
-    DynamoDBClient.mockImplementation(() => {
-      return {
-        send: mockSend
-      };
-    });
-    DynamoDBDocumentClient.from = jest.fn().mockReturnValue({
-      send: mockSend
-    });
+    // Default: any pharmacy-enrichment lookup beyond the initial scan resolves
+    // to "not found" unless a test overrides it with mockResolvedValueOnce.
+    mockSend.mockResolvedValue({});
   });
 
   it('should return 400 for missing query parameter', async () => {
@@ -59,7 +60,6 @@ describe('Medicine Search Lambda', () => {
       }
     };
 
-    // Mock the DynamoDB scan response
     mockSend.mockResolvedValueOnce({
       Items: [],
       Count: 0
@@ -81,24 +81,17 @@ describe('Medicine Search Lambda', () => {
       }
     };
 
-    // Mock the DynamoDB scan response with some items
     const mockItems = [
-      {
-        medicine_name: 'paracetamol',
-        pharmacy_id: 'PHARMACY_01',
-        quantity: 100
-      },
-      {
-        medicine_name: 'paracetamol',
-        pharmacy_id: 'PHARMACY_02',
-        quantity: 50
-      }
+      { medicine_name: 'paracetamol', pharmacy_id: 'PHARMACY_01', quantity: 100 },
+      { medicine_name: 'paracetamol', pharmacy_id: 'PHARMACY_02', quantity: 50 }
     ];
 
     mockSend.mockResolvedValueOnce({
       Items: mockItems,
       Count: mockItems.length
     });
+    // Subsequent calls are per-item pharmacy enrichment lookups, which fall
+    // back to the default {} (no Item) set in beforeEach.
 
     const response = await handler(event);
 
@@ -107,8 +100,34 @@ describe('Medicine Search Lambda', () => {
     expect(body.count).toBe(2);
     expect(body.items).toHaveLength(2);
     expect(body.searchTerm).toBe('paracetamol');
-    // Note: we are not mocking the pharmacy lookup, so the items will not have pharmacy property
-    // In a real test, we would also mock the GetCommand for pharmacy lookup.
+  });
+
+  it('should enrich results with pharmacy details when available', async () => {
+    const event = {
+      queryStringParameters: {
+        q: 'paracetamol'
+      }
+    };
+
+    mockSend.mockResolvedValueOnce({
+      Items: [
+        { medicine_name: 'paracetamol', pharmacy_id: 'PHARMACY_01', quantity: 100 }
+      ],
+      Count: 1
+    });
+    mockSend.mockResolvedValueOnce({
+      Item: { pharmacy_id: 'PHARMACY_01', name: 'Meds Pharmacy', address: '123 Main St' }
+    });
+
+    const response = await handler(event);
+
+    expect(response.statusCode).toBe(200);
+    const body = JSON.parse(response.body);
+    expect(body.items[0].pharmacy).toEqual({
+      pharmacy_id: 'PHARMACY_01',
+      name: 'Meds Pharmacy',
+      address: '123 Main St'
+    });
   });
 
   it('should return 500 on internal error', async () => {
@@ -118,7 +137,7 @@ describe('Medicine Search Lambda', () => {
       }
     };
 
-    // Mock the DynamoDB scan to throw an error
+    mockSend.mockReset();
     mockSend.mockRejectedValueOnce(new Error('DynamoDB error'));
 
     const response = await handler(event);

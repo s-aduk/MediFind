@@ -254,7 +254,6 @@ Full, step‑by‑step procedures are in the `docs/runbooks/` folder:
 
 ```bash
 # 1. Build SAM application
-cd infrastructure
 sam build
 
 # 2. Deploy (guided first time)
@@ -262,7 +261,7 @@ sam deploy --guided \
   --stack-name medifind-staging \
   --region eu-north-1 \
   --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-  --parameter-overrides EnvironmentName=staging
+  --parameter-overrides Environment=staging
 
 # 3. Get outputs (API URL, Cognito Pool ID, etc.)
 sam list-stack-outputs --stack-name medifind-staging

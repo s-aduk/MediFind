@@ -29,8 +29,9 @@ function verifyToken(token) {
   return new Promise((resolve, reject) => {
     jwt.verify(token, getKey, {
       algorithms: ['RS256'],
-      // Validate the audience (app client id) to ensure token was issued for this app
-      audience: APP_CLIENT_ID
+      // If you want to validate the audience (app client id), uncomment the next line
+      // line and set the audience.
+      // audience: APP_CLIENT_ID // Validate the audience (app client id)
     }, (err, decoded) => {
       if (err) {
         return reject(err);
@@ -59,7 +60,9 @@ function generatePolicy(principalId, effect, resource, context) {
     };
   }
 
-  // Pass user context to backend functions
+  // Context values are passed through to event.requestContext.authorizer
+  // in downstream Lambda proxy integrations. Values must be flat strings,
+  // numbers, or booleans (no nested objects/arrays).
   if (context) {
     authResponse.context = context;
   }
@@ -94,16 +97,18 @@ exports.handler = async (event) => {
     // Verify the token
     const decoded = await verifyToken(token);
 
-    // Build context with user claims for backend authorization
-    const context = {
-      sub: decoded.sub,
+    // Optionally, you can add additional checks here, such as:
+    // - Checking token expiration (jwt.verify already does this)
+    // - Checking token usage (e.g., token not in a denied list)
+    // - Checking custom claims
+
+    // Return an Allow policy, with the caller's identity attached so
+    // downstream Lambdas can trust it instead of client-supplied fields.
+    return generatePolicy(decoded.sub, 'Allow', event.methodArn, {
+      userId: decoded.sub,
       email: decoded.email || '',
       role: decoded['custom:role'] || 'user',
-      username: decoded.username || ''
-    };
-
-    // Return an Allow policy with context
-    return generatePolicy(decoded.sub, 'Allow', event.methodArn, context);
+    });
   } catch (error) {
     console.error('Error authorizing request:', error);
 

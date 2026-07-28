@@ -6,35 +6,26 @@ const { v4: uuidv4 } = require('uuid');
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
-// Common CORS headers
-const corsHeaders = {
-  "Content-Type": "application/json",
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-};
-
-// Helper to check admin authorization
-function checkAdminAuth(event) {
-  const role = event.requestContext?.authorizer?.role;
-  return role === 'admin';
-}
-
 exports.handler = async (event) => {
   try {
-    // Check admin authorization for all admin endpoints
-    if (!checkAdminAuth(event)) {
-      return {
-        statusCode: 403,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: "Admin access required" })
-      };
-    }
-
     const httpMethod = event.httpMethod;
     const path = event.path;
     const queryStringParameters = event.queryStringParameters || {};
     const pathParameters = event.pathParameters || {};
+
+    const role = event.requestContext?.authorizer?.role;
+    if (role !== 'admin') {
+      return {
+        statusCode: 403,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
+        body: JSON.stringify({ error: "Forbidden: admin role required" })
+      };
+    }
 
     // Route based on HTTP method and path
     if (httpMethod === 'GET' && path.includes('/admin/pharmacies')) {
@@ -53,18 +44,28 @@ exports.handler = async (event) => {
       // Delete pharmacy
       return await deletePharmacy(pathParameters.pharmacyId);
     } else {
-          return {
-            statusCode: 405,
-            headers: corsHeaders,
-            body: JSON.stringify({ error: "Method not allowed" })
-          };
-        }
+      return {
+        statusCode: 405,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
+        body: JSON.stringify({ error: "Method not allowed" })
+      };
+    }
   } catch (error) {
     console.error('Error processing request:', error);
 
     return {
       statusCode: 500,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+      },
       body: JSON.stringify({
         error: 'Internal server error',
         message: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -97,14 +98,14 @@ async function getPharmacies(queryParams) {
       let exprIndex = 0;
 
       if (queryParams.name) {
-        filterExpressions.push('contains(#name, :name)');
+        filterExpressions.push(`contains(#name, :name${exprIndex})`);
         expressionAttributeNames['#name'] = 'name';
         expressionAttributeValues[`:name${exprIndex}`] = queryParams.name;
         exprIndex++;
       }
 
       if (queryParams.city) {
-        filterExpressions.push('contains(#city, :city)');
+        filterExpressions.push(`contains(#city, :city${exprIndex})`);
         expressionAttributeNames['#city'] = 'address';
         expressionAttributeValues[`:city${exprIndex}`] = queryParams.city;
         exprIndex++;
@@ -121,7 +122,12 @@ async function getPharmacies(queryParams) {
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+      },
       body: JSON.stringify({
         count: scanResponse.Count,
         items: scanResponse.Items || [],
@@ -140,7 +146,12 @@ async function getPharmacy(pharmacyId) {
     if (!pharmacyId) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Pharmacy ID is required" })
       };
     }
@@ -155,14 +166,24 @@ async function getPharmacy(pharmacyId) {
     if (!response.Item) {
       return {
         statusCode: 404,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Pharmacy not found" })
       };
     }
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+      },
       body: JSON.stringify(response.Item)
     };
   } catch (error) {
@@ -180,7 +201,12 @@ async function createPharmacy(body) {
     } catch (parseError) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Invalid JSON in request body" })
       };
     }
@@ -191,12 +217,18 @@ async function createPharmacy(body) {
       if (!pharmacyData[field]) {
         return {
           statusCode: 400,
-          headers: corsHeaders,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+          },
           body: JSON.stringify({ error: `Missing required field: ${field}` })
         };
       }
     }
 
+    // Check if pharmacy with similar name/address already exists (optional)
     const pharmacyId = `PHARM-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
 
     const newPharmacy = {
@@ -222,7 +254,12 @@ async function createPharmacy(body) {
 
     return {
       statusCode: 201,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+      },
       body: JSON.stringify({
         message: "Pharmacy created successfully",
         pharmacy: newPharmacy
@@ -240,7 +277,12 @@ async function updatePharmacy(pharmacyId, body) {
     if (!pharmacyId) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Pharmacy ID is required" })
       };
     }
@@ -251,7 +293,12 @@ async function updatePharmacy(pharmacyId, body) {
     } catch (parseError) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Invalid JSON in request body" })
       };
     }
@@ -267,7 +314,12 @@ async function updatePharmacy(pharmacyId, body) {
     if (!existingPharmacy.Item) {
       return {
         statusCode: 404,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Pharmacy not found" })
       };
     }
@@ -298,7 +350,12 @@ async function updatePharmacy(pharmacyId, body) {
     if (updateExpressionParts.length === 0) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "No valid fields to update" })
       };
     }
@@ -326,7 +383,12 @@ async function updatePharmacy(pharmacyId, body) {
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+      },
       body: JSON.stringify({
         message: "Pharmacy updated successfully",
         pharmacy: updatedPharmacy.Item
@@ -344,7 +406,12 @@ async function deletePharmacy(pharmacyId) {
     if (!pharmacyId) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Pharmacy ID is required" })
       };
     }
@@ -360,7 +427,12 @@ async function deletePharmacy(pharmacyId) {
     if (!existingPharmacy.Item) {
       return {
         statusCode: 404,
-        headers: corsHeaders,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+        },
         body: JSON.stringify({ error: "Pharmacy not found" })
       };
     }
@@ -375,7 +447,12 @@ async function deletePharmacy(pharmacyId) {
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+      },
       body: JSON.stringify({
         message: "Pharmacy deleted successfully",
         pharmacyId: pharmacyId

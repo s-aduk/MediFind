@@ -1,9 +1,9 @@
-// Use the environment variable (or fallback to hardcoded for testing)
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://to23iirip3.execute-api.eu-north-1.amazonaws.com/Prod/';
+// Use the environment variable (or fallback to hardcoded for local testing)
+const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://to23iirip3.execute-api.eu-north-1.amazonaws.com/Prod/';
 
-if (typeof window !== 'undefined') {
-  console.log('🔧 API_BASE:', API_BASE);
-}
+// Ensure a trailing slash so `new URL(path, API_BASE)` appends rather than
+// replacing the last path segment (e.g. the API Gateway stage name).
+const API_BASE = RAW_API_BASE.endsWith('/') ? RAW_API_BASE : `${RAW_API_BASE}/`;
 
 // Helper to handle responses
 const handleResponse = async (response) => {
@@ -11,7 +11,7 @@ const handleResponse = async (response) => {
     let errorMessage = `HTTP error ${response.status}`;
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
+      errorMessage = errorData.error || errorData.message || errorMessage;
     } catch {
       errorMessage = response.statusText || errorMessage;
     }
@@ -20,17 +20,23 @@ const handleResponse = async (response) => {
   return response.json();
 };
 
-// 1. Search Medicines
-export const searchMedicines = async (query) => {
-  if (!API_BASE) {
-    throw new Error('API_BASE is not defined');
+const buildUrl = (path, searchParams) => {
+  const url = new URL(path, API_BASE);
+  if (searchParams) {
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        url.searchParams.append(key, value);
+      }
+    });
   }
+  return url;
+};
+
+// 1. Search Medicines
+// Returns { count, items, searchTerm }
+export const searchMedicines = async (query) => {
   try {
-    const url = new URL("search", API_BASE);
-    if (typeof window !== 'undefined') {
-      console.log('🔍 Searching with URL:', url.toString());
-    }
-    url.searchParams.append('q', query.trim());
+    const url = buildUrl('search', { q: query.trim() });
     const response = await fetch(url);
     return handleResponse(response);
   } catch (error) {
@@ -39,14 +45,12 @@ export const searchMedicines = async (query) => {
   }
 };
 
-// 2. Get Pharmacies with stock for a medicine
+// 2. Get pharmacies with a medicine in stock
+// Backend route is GET /pharmacies/{medicineName} (path parameter, not query string)
+// Returns { count, items, lastEvaluatedKey }
 export const getPharmaciesForMedicine = async (medicineName) => {
-  if (!API_BASE) {
-    throw new Error('API_BASE is not defined');
-  }
   try {
-    // Backend expects path parameter: /pharmacies/{medicineName}
-    const url = new URL("pharmacies/" + encodeURIComponent(medicineName), API_BASE);
+    const url = buildUrl(`pharmacies/${encodeURIComponent(medicineName)}`);
     const response = await fetch(url);
     return handleResponse(response);
   } catch (error) {
@@ -57,14 +61,11 @@ export const getPharmaciesForMedicine = async (medicineName) => {
 
 // 3. Place Order (requires authentication)
 export const placeOrder = async (orderData, idToken) => {
-  if (!API_BASE) {
-    throw new Error('API_BASE is not defined');
-  }
   if (!idToken) {
     throw new Error('Missing authentication token');
   }
   try {
-    const url = new URL("orders", API_BASE);
+    const url = buildUrl('orders');
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -80,12 +81,13 @@ export const placeOrder = async (orderData, idToken) => {
   }
 };
 
-// 4. Admin: Register Pharmacy (requires admin auth)
+// 4. Admin: Register Pharmacy (requires authentication)
+// Backend route is POST /admin/pharmacies (plural)
 export const registerPharmacy = async (pharmacyData, idToken) => {
   if (!idToken) {
     throw new Error('Missing authentication token');
   }
-  const url = new URL("admin/pharmacies", API_BASE);
+  const url = buildUrl('admin/pharmacies');
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -97,12 +99,12 @@ export const registerPharmacy = async (pharmacyData, idToken) => {
   return handleResponse(response);
 };
 
-// 5. Admin: Update Inventory (requires admin auth)
+// 5. Admin: Update Inventory (requires authentication)
 export const updateInventory = async (inventoryData, idToken) => {
   if (!idToken) {
     throw new Error('Missing authentication token');
   }
-  const url = new URL("admin/inventory", API_BASE);
+  const url = buildUrl('admin/inventory');
   const response = await fetch(url, {
     method: 'POST',
     headers: {

@@ -1,6 +1,8 @@
+'use client';
+
 import { useState } from 'react';
 import { searchMedicines } from '../lib/api';
-import { ArrowRight, MapPin, Pill, Rx } from 'lucide-react';
+import { ArrowRight, MapPin, Pill, PillBottle } from 'lucide-react';
 
 export default function SearchMedicine({ onSelectMedicine }) {
   const [query, setQuery] = useState('');
@@ -19,7 +21,7 @@ export default function SearchMedicine({ onSelectMedicine }) {
     setError('');
     try {
       const data = await searchMedicines(query.trim());
-      setResults(data);
+      setResults(data.items || []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -95,7 +97,7 @@ export default function SearchMedicine({ onSelectMedicine }) {
               {results.length} Pharmacies Found
             </h2>
             <p className="text-sm text-gray-500">
-              Showing results for ""{query}""
+              Showing results for &quot;{query}&quot;
             </p>
           </div>
 
@@ -108,7 +110,7 @@ export default function SearchMedicine({ onSelectMedicine }) {
                 <div className="flex justify-between items-start mb-3">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
-                      {pharm.name || pharm.pharmacyName || 'Pharmacy'}
+                      {pharm.pharmacy?.name || 'Pharmacy'}
                       <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
                         Verified
                       </span>
@@ -116,14 +118,14 @@ export default function SearchMedicine({ onSelectMedicine }) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">
-                      {pharm.distance?.toFixed(1) + '&apos; &#32;km&apos;'} || '&apos;Nearby&apos;'
+                      {pharm.distance ? pharm.distance.toFixed(1) + ' km' : 'Nearby'}
                     </span>
                   </div>
                 </div>
 
-                {pharm.address && (
+                {pharm.pharmacy?.address && (
                   <p className="text-gray-600 mb-2 flex items-center">
-                    <MapPin className="h-4 w-4 mr-2 text-green-500" /> {pharm.address}
+                    <MapPin className="h-4 w-4 mr-2 text-green-500" /> {pharm.pharmacy.address}
                   </p>
                 )}
 
@@ -142,12 +144,12 @@ export default function SearchMedicine({ onSelectMedicine }) {
 
                   <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
                     <div className="flex-shrink-0">
-                      <Rx className="h-4 w-4 text-green-500" />
+                      <PillBottle className="h-4 w-4 text-green-500" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900">Stock</p>
                       <p className="text-lg font-bold">
-                        {pharm.stock ?? pharm.quantity > 0 ? (
+                        {(pharm.stock ?? pharm.quantity ?? 0) > 0 ? (
                           <span className="text-green-600">{pharm.stock ?? pharm.quantity} in stock</span>
                         ) : (
                           <span className="text-red-600">Out of stock</span>
@@ -165,7 +167,9 @@ export default function SearchMedicine({ onSelectMedicine }) {
                     <div>
                       <p className="text-sm font-medium text-gray-900">Last Updated</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(pharm.last_updated || pharm.updated_at || new Date()).toLocaleDateString()}
+                        {pharm.last_updated || pharm.updated_at
+                          ? new Date(pharm.last_updated || pharm.updated_at).toLocaleDateString()
+                          : 'N/A'}
                       </p>
                     </div>
                   </div>
@@ -190,10 +194,10 @@ export default function SearchMedicine({ onSelectMedicine }) {
       {!loading && results.length === 0 && query && (
         <div className="text-center py-8">
           <div className="w-16 h-16 mx-auto mb-4 bg-green-50 rounded-full flex items-center justify-center">
-            <Rx className="h-8 w-8 text-green-400" />
+            <PillBottle className="h-8 w-8 text-green-400" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-3">
-            No pharmacies found for ""{query}""
+            No pharmacies found for &quot;{query}&quot;
           </h3>
           <p className="text-gray-600 mb-4">
             Try checking the spelling or searching for a different medication

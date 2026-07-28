@@ -110,3 +110,4 @@ lerna-debug.log
 .yarn-install-state.gz
 .pnp.*
 .pnp.js
+FIXES.md
