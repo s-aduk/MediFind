@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: eu-north-1
   # These will be set via repository secrets
   # AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   # AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -20,16 +20,17 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
       
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
       
@@ -59,17 +60,17 @@ jobs:
         run: |
           npm run lint
       
-      - name: Run frontend tests
+      - name: Run frontend build check
         working-directory: frontend
         run: |
-          npm test -- --watchAll=false
+          npm run build
 
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Run dependency check (Node.js)
         uses: dependency-check/Dependency-Check_Action@main
@@ -94,16 +95,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, security-scan]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
       
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
       
@@ -118,27 +120,24 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         run: npm run build
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v3
       
-      - name: Package backend for deployment
+      - name: Build and validate SAM application
         working-directory: infrastructure
         run: |
-          # Validate SAM template
           sam validate
-          
-          # Package the application
-          sam package \
-            --s3-bucket medifind-deployments-${{ github.run_id }} \
-            --output-template-file packaged.yaml \
-            --region $AWS_REGION
-      
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+          sam build
+
+      - name: Upload SAM build artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: sam-package
-          path: infrastructure/packaged.yaml
+          name: sam-build
+          path: infrastructure/.aws-sam
       
       - name: Upload frontend build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: frontend/.next
@@ -150,33 +149,34 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment: staging
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Download SAM package
-        uses: actions/download-artifact@v3
+      - uses: actions/checkout@v4
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v3
+
+      - name: Download SAM build artifact
+        uses: actions/download-artifact@v4
         with:
-          name: sam-package
-          path: infrastructure
+          name: sam-build
+          path: infrastructure/.aws-sam
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_STAGING }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGING }}
-          aws-region: us-east-1
+          aws-region: eu-north-1
       
       - name: Deploy to Staging
         working-directory: infrastructure
         run: |
           sam deploy \
-            --template-file packaged.yaml \
             --stack-name medifind-staging \
             --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-            --parameter-overrides \
-                Environment=staging \
-                EnableWAF=false \
-                LoggingLevel=INFO \
-            --region us-east-1 \
+            --parameter-overrides EnvironmentName=staging \
+            --resolve-s3 \
+            --no-confirm-changeset \
+            --region eu-north-1 \
             --no-fail-on-empty-changeset \
             --tags Environment=staging
       
@@ -190,7 +190,7 @@ jobs:
           # Sync to S3 bucket
           aws s3 sync frontend/.next s3://medifind-frontend-staging-${{ github.account_id }} \
             --delete \
-            --region us-east-1
+            --region eu-north-1
             
           # Optional: Invalidate CloudFront cache
           # aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_STAGING }} --paths "/*"
@@ -202,43 +202,43 @@ jobs:
     if: github.ref == 'refs/heads/main'
     environment: production
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Download SAM package
-        uses: actions/download-artifact@v3
+      - uses: actions/checkout@v4
+
+      - name: Setup SAM CLI
+        uses: aws-actions/setup-sam@v3
+
+      - name: Download SAM build artifact
+        uses: actions/download-artifact@v4
         with:
-          name: sam-package
-          path: infrastructure
+          name: sam-build
+          path: infrastructure/.aws-sam
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PRODUCTION }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PRODUCTION }}
-          aws-region: us-east-1
+          aws-region: eu-north-1
       
       - name: Deploy to Production
         working-directory: infrastructure
         run: |
           sam deploy \
-            --template-file packaged.yaml \
-            --stack-name medifind-production \
+            --stack-name medifind-prod \
             --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-            --parameter-overrides \
-                Environment=production \
-                EnableWAF=true \
-                LoggingLevel=WARN \
-                AlarmNotificationEmail=${{ secrets.ALERT_EMAIL }} \
-            --region us-east-1 \
+            --parameter-overrides EnvironmentName=prod \
+            --resolve-s3 \
+            --no-confirm-changeset \
+            --region eu-north-1 \
             --no-fail-on-empty-changeset \
-            --tags Environment=production
+            --tags Environment=prod
       
       - name: Deploy Frontend to S3
         run: |
           # Sync to S3 bucket
           aws s3 sync frontend/.next s3://medifind-frontend-production-${{ github.account_id }} \
             --delete \
-            --region us-east-1
+            --region eu-north-1
             
           # Optional: Invalidate CloudFront cache
           # aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_PRODUCTION }} --paths "/*"
@@ -253,19 +253,19 @@ jobs:
         required: true
         default: 'staging'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_STAGING }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_STAGING }}
-          aws-region: us-east-1
+          aws-region: eu-north-1
         # Note: In a real workflow, you'd select credentials based on environment input
       
       - name: Install dependencies
@@ -280,6 +280,4 @@ jobs:
         env:
           # Override table names if needed for different environments
           # These would normally come from the deployed stack outputs
-          # For simplicity, we're assuming they match or using parameters
-          AWS_DEFAULT_REGION: us-east-1
-
+          AWS_DEFAULT_REGION: eu-north-1

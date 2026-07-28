@@ -1,0 +1,7 @@
+{
+  "name": "medifind-health",
+  "version": "1.0.0",
+  "description": "Health check Lambda function for MediFind",
+  "main": "index.js",
+  "license": "MIT"
+}

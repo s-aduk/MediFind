@@ -6,95 +6,90 @@ const { v4: uuidv4 } = require('uuid');
 const client = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(client);
 
+// Common CORS headers
+const corsHeaders = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
+};
+
+// Helper to check admin authorization
+function checkAdminAuth(event) {
+  const role = event.requestContext?.authorizer?.role;
+  return role === 'admin';
+}
+
+// Helper to parse composite key from path
+function parseInventoryPath(path) {
+  // Path format: /admin/inventory/{medicineName}/{pharmacyId}
+  const match = path.match(/\/admin\/inventory\/([^\/]+)\/([^\/]+)$/);
+  if (match) {
+    return { medicineName: decodeURIComponent(match[1]), pharmacyId: decodeURIComponent(match[2]) };
+  }
+  return null;
+}
+
 exports.handler = async (event) => {
   try {
+    // Check admin authorization for all admin endpoints
+    if (!checkAdminAuth(event)) {
+      return {
+        statusCode: 403,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Admin access required" })
+      };
+    }
+
     const httpMethod = event.httpMethod;
     const path = event.path;
     const queryStringParameters = event.queryStringParameters || {};
     const pathParameters = event.pathParameters || {};
 
     // Route based on HTTP method and path
-    if (httpMethod === 'GET' && path.includes('/admin/inventory')) {
-      // Get inventory items (with optional filtering)
+    if (httpMethod === 'GET' && path === '/admin/inventory') {
+      // Get inventory items (with optional filtering via query params)
       return await getInventory(queryStringParameters);
-    } else if (httpMethod === 'GET' && path.includes('/admin/inventory/') && pathParameters.inventoryId) {
-      // Get specific inventory item (by composite key: medicine_name and pharmacy_id)
-      // Note: We expect the path to be /admin/inventory/{medicineName}/{pharmacyId}
-      // But API Gateway doesn't naturally support two path parameters in one variable easily.
-      // Alternative: use query parameters or change the path structure.
-      // For simplicity, let's assume we pass medicineName and pharmacyId as query parameters for GET by ID.
-      // Actually, let's change the approach: we'll use query parameters for filtering in GET /admin/inventory
-      // and for getting a specific item we'll require both medicineName and pharmacyId in query string.
-      // However, to keep the API consistent, let's handle the GET by ID via query parameters in the same endpoint.
-      // So we'll treat /admin/inventory as a collection endpoint that supports filtering by medicineName and pharmacyId.
-      // Therefore, we don't need a separate GET by ID path. Instead, we'll use query parameters.
-      // But the requirement might be to get a specific inventory item by its composite key.
-      // Let's adjust: we'll support getting a specific item by providing both medicineName and pharmacyId in query string.
-      // If the path has an ID, we'll treat it as a medicineName and expect pharmacyId in query string? That's messy.
-      // Let's reconsider the API design for the admin inventory:
-      //   GET /admin/inventory -> list with filters (medicineName, pharmacyId, etc.)
-      //   GET /admin/inventory/{medicineName}/{pharmacyId} -> get specific item (if we want to support this)
-      //   POST /admin/inventory -> create
-      //   PUT /admin/inventory/{medicineName}/{pharmacyId} -> update
-      //   DELETE /admin/inventory/{medicineName}/{pharmacyId} -> delete
-      //
-      // However, note that the API Gateway path parameter for a composite key is tricky because we have two parts.
-      // We can use a single path parameter that encodes both, or use two path parameters by defining the path as:
-      //   /admin/inventory/{medicineName}/{pharmacyId}
-      // But then we have to define two path parameters in the API Gateway.
-      //
-      // Given the complexity, and to keep it simple, let's stick to using query parameters for filtering and getting a specific item.
-      // We'll change the requirement: to get a specific inventory item, the client must provide both medicineName and pharmacyId as query parameters.
-      // So we'll only have one endpoint: GET /admin/inventory (with query parameters for filtering and getting one item)
-      //
-      // But wait, the original SAM template we wrote for AdminInventoryFunction had:
-      //   Path: /admin/inventory
-      //   Method: ANY
-      // So it's a single endpoint for all methods. We'll have to handle the different methods and use query parameters for filtering and identification.
-      //
-      // Therefore, we don't need to handle the path with ID. We'll only use the base path /admin/inventory and use:
-      //   GET: list or get one (if medicineName and pharmacyId are provided in query string)
-      //   POST: create
-      //   PUT: update (requires medicineName and pharmacyId in query string to identify the item)
-      //   DELETE: delete (requires medicineName and pharmacyId in query string to identify the item)
-      //
-      // Let's adjust the logic accordingly.
-
-      // Since we are in the GET branch and the path is exactly /admin/inventory (no extra path), we'll use query parameters.
-      // If there are additional path segments, we'll treat it as an error for now.
-      if (Object.keys(pathParameters).length === 0) {
-        return await getInventory(queryStringParameters);
-      } else {
-        // If there are path parameters, we don't have a handler for that yet.
-        return {
-          statusCode: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-          },
-          body: JSON.stringify({ error: "Invalid URL" })
-        };
+    } else if (httpMethod === 'GET' && path.includes('/admin/inventory/')) {
+      // Get specific inventory item by composite key in path
+      const keys = parseInventoryPath(path);
+      if (keys) {
+        return await getInventoryItem(keys.medicineName, keys.pharmacyId);
       }
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Invalid inventory path. Use /admin/inventory/{medicineName}/{pharmacyId}" })
+      };
     } else if (httpMethod === 'POST' && path === '/admin/inventory') {
       // Create new inventory item
       return await createInventoryItem(event.body);
-    } else if (httpMethod === 'PUT' && path === '/admin/inventory') {
-      // Update existing inventory item (requires medicineName and pharmacyId in query string)
-      return await updateInventoryItem(queryStringParameters, event.body);
-    } else if (httpMethod === 'DELETE' && path === '/admin/inventory') {
-      // Delete existing inventory item (requires medicineName and pharmacyId in query string)
-      return await deleteInventoryItem(queryStringParameters);
+    } else if (httpMethod === 'PUT' && path.includes('/admin/inventory/')) {
+      // Update existing inventory item (composite key in path)
+      const keys = parseInventoryPath(path);
+      if (keys) {
+        return await updateInventoryItem(keys.medicineName, keys.pharmacyId, event.body);
+      }
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Invalid inventory path. Use /admin/inventory/{medicineName}/{pharmacyId}" })
+      };
+    } else if (httpMethod === 'DELETE' && path.includes('/admin/inventory/')) {
+      // Delete existing inventory item (composite key in path)
+      const keys = parseInventoryPath(path);
+      if (keys) {
+        return await deleteInventoryItem(keys.medicineName, keys.pharmacyId);
+      }
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Invalid inventory path. Use /admin/inventory/{medicineName}/{pharmacyId}" })
+      };
     } else {
       return {
         statusCode: 405,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Method not allowed" })
       };
     }
@@ -103,12 +98,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 500,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         error: 'Internal server error',
         message: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -157,8 +147,6 @@ async function getInventory(queryParams) {
 
     // Filter by minimum quantity
     if (queryParams.minQuantity !== undefined) {
-      filterExpressions.join(' AND ');
-      // Note: We are using a reserved word 'quantity', so we use an alias.
       filterExpressions.push('#qty >= :minQuantity');
       expressionAttributeNames['#qty'] = 'quantity';
       expressionAttributeValues[`:minQuantity${exprIndex}`] = parseInt(queryParams.minQuantity);
@@ -181,11 +169,10 @@ async function getInventory(queryParams) {
 
     const scanResponse = await docClient.send(new ScanCommand(scanParams));
 
-    // Enrich each item with pharmacy and medicine details (optional)
+    // Enrich each item with pharmacy details
     const enrichedItems = await Promise.all(
       (scanResponse.Items || []).map(async (item) => {
         try {
-          // Get pharmacy details
           if (item.pharmacy_id) {
             const pharmacyResponse = await docClient.send(
               new GetCommand({
@@ -198,11 +185,8 @@ async function getInventory(queryParams) {
               item.pharmacy = pharmacyResponse.Item;
             }
           }
-          // Note: medicine details might be stored elsewhere, but for now we just have the name.
-          // If we had a medicines table, we could join here.
         } catch (error) {
           console.warn(`Failed to enrich inventory item ${item.medicine_name}@${item.pharmacy_id}:`, error);
-          // Continue without enrichment
         }
         return item;
       })
@@ -210,20 +194,61 @@ async function getInventory(queryParams) {
 
     return {
       statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         count: enrichedItems.length,
         items: enrichedItems,
         lastEvaluatedKey: scanResponse.LastEvaluatedKey
       })
-    });
+    };
   } catch (error) {
     console.error('Error getting inventory:', error);
+    throw error;
+  }
+}
+
+// Get specific inventory item by composite key
+async function getInventoryItem(medicineName, pharmacyId) {
+  try {
+    const response = await docClient.send(
+      new GetCommand({
+        TableName: process.env.INVENTORY_TABLE,
+        Key: {
+          medicine_name: medicineName.toLowerCase(),
+          pharmacy_id: pharmacyId
+        }
+      })
+    );
+
+    if (!response.Item) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Inventory item not found" })
+      };
+    }
+
+    // Enrich with pharmacy details
+    const item = response.Item;
+    if (item.pharmacy_id) {
+      const pharmacyResponse = await docClient.send(
+        new GetCommand({
+          TableName: process.env.PHARMACIES_TABLE,
+          Key: { pharmacy_id: item.pharmacy_id }
+        })
+      );
+      if (pharmacyResponse.Item) {
+        item.pharmacy = pharmacyResponse.Item;
+      }
+    }
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify(item)
+    };
+  } catch (error) {
+    console.error('Error getting inventory item:', error);
     throw error;
   }
 }
@@ -237,12 +262,7 @@ async function createInventoryItem(body) {
     } catch (parseError) {
       return {
         statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Invalid JSON in request body" })
       };
     }
@@ -253,12 +273,7 @@ async function createInventoryItem(body) {
       if (inventoryData[field] === undefined) {
         return {
           statusCode: 400,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Content-Type",
-            "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-          },
+          headers: corsHeaders,
           body: JSON.stringify({ error: `Missing required field: ${field}` })
         };
       }
@@ -268,12 +283,7 @@ async function createInventoryItem(body) {
     if (!Number.isInteger(inventoryData.quantity) || inventoryData.quantity < 0) {
       return {
         statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Quantity must be a non-negative integer" })
       };
     }
@@ -292,12 +302,7 @@ async function createInventoryItem(body) {
     if (existingItem.Item) {
       return {
         statusCode: 409, // Conflict
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Inventory item already exists for this medicine and pharmacy" })
       };
     }
@@ -324,12 +329,7 @@ async function createInventoryItem(body) {
 
     return {
       statusCode: 201,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Inventory item created successfully",
         item: newItem
@@ -342,37 +342,15 @@ async function createInventoryItem(body) {
 }
 
 // Update existing inventory item
-async function updateInventoryItem(queryParams, body) {
+async function updateInventoryItem(medicineName, pharmacyId, body) {
   try {
-    // Get the keys from query string
-    const medicineName = queryParams.medicineName;
-    const pharmacyId = queryParams.pharmacyId;
-
-    if (!medicineName || !pharmacyId) {
-      return {
-        statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
-        body: JSON.stringify({ error: "Both medicineName and pharmacyId are required as query parameters for update" })
-      };
-    }
-
     let updateData;
     try {
       updateData = JSON.parse(body);
     } catch (parseError) {
       return {
         statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Invalid JSON in request body" })
       };
     }
@@ -391,12 +369,7 @@ async function updateInventoryItem(queryParams, body) {
     if (!existingItem.Item) {
       return {
         statusCode: 404,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Inventory item not found" })
       };
     }
@@ -412,19 +385,6 @@ async function updateInventoryItem(queryParams, body) {
 
     for (const field of updatableFields) {
       if (updateData[field] !== undefined) {
-        // Additional validation for quantity
-        if (field === 'quantity' && (!Number.isInteger(updateData[field]) || updateData[field] < 0)) {
-          return {
-            statusCode: 400,
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Control-Allow-Origin": "*",
-              "Access-Control-Allow-Headers": "Content-Type",
-              "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-            },
-            body: JSON.stringify({ error: "Quantity must be a non-negative integer" })
-          };
-        }
         updateExpressionParts.push(`#${field} = :${field}${exprIndex}`);
         expressionAttributeNames[`#${field}`] = field;
         expressionAttributeValues[`:${field}${exprIndex}`] = updateData[field];
@@ -440,12 +400,7 @@ async function updateInventoryItem(queryParams, body) {
     if (updateExpressionParts.length === 0) {
       return {
         statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "No valid fields to update" })
       };
     }
@@ -479,12 +434,7 @@ async function updateInventoryItem(queryParams, body) {
 
     return {
       statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Inventory item updated successfully",
         item: updatedItem.Item
@@ -497,26 +447,9 @@ async function updateInventoryItem(queryParams, body) {
 }
 
 // Delete inventory item
-async function deleteInventoryItem(queryParams) {
+async function deleteInventoryItem(medicineName, pharmacyId) {
   try {
-    // Get the keys from query string
-    const medicineName = queryParams.medicineName;
-    const pharmacyId = queryParams.pharmacyId;
-
-    if (!medicineName || !pharmacyId) {
-      return {
-        statusCode: 400,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
-        body: JSON.stringify({ error: "Both medicineName and pharmacyId are required as query parameters for delete" })
-      };
-    }
-
-    // Check if the item exists
+    // Check if item exists
     const existingItem = await docClient.send(
       new GetCommand({
         TableName: process.env.INVENTORY_TABLE,
@@ -530,12 +463,7 @@ async function deleteInventoryItem(queryParams) {
     if (!existingItem.Item) {
       return {
         statusCode: 404,
-        headers: {
-          "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: "Inventory item not found" })
       };
     }
@@ -553,16 +481,11 @@ async function deleteInventoryItem(queryParams) {
 
     return {
       statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "Content-Type",
-        "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-      },
+      headers: corsHeaders,
       body: JSON.stringify({
         message: "Inventory item deleted successfully",
-        medicineName: medicineName,
-        pharmacyId: pharmacyId
+        medicineName,
+        pharmacyId
       })
     };
   } catch (error) {

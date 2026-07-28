@@ -29,9 +29,8 @@ function verifyToken(token) {
   return new Promise((resolve, reject) => {
     jwt.verify(token, getKey, {
       algorithms: ['RS256'],
-      // If you want to validate the audience (app client id), uncomment the next line
-      // line and set the audience.
-      // audience: APP_CLIENT_ID // Validate the audience (app client id)
+      // Validate the audience (app client id) to ensure token was issued for this app
+      audience: APP_CLIENT_ID
     }, (err, decoded) => {
       if (err) {
         return reject(err);
@@ -42,7 +41,7 @@ function verifyToken(token) {
 }
 
 // Generate the policy document for API Gateway
-function generatePolicy(principalId, effect, resource) {
+function generatePolicy(principalId, effect, resource, context) {
   const authResponse = {
     principalId: principalId
   };
@@ -60,12 +59,10 @@ function generatePolicy(principalId, effect, resource) {
     };
   }
 
-  // Optional: add context to be passed to the Lambda function
-  // authResponse.context = {
-  //   stringKey: "stringval",
-  //   numberKey: 123,
-  //   booleanKey: true
-  // };
+  // Pass user context to backend functions
+  if (context) {
+    authResponse.context = context;
+  }
 
   return authResponse;
 }
@@ -97,13 +94,16 @@ exports.handler = async (event) => {
     // Verify the token
     const decoded = await verifyToken(token);
 
-    // Optionally, you can add additional checks here, such as:
-    // - Checking token expiration (jwt.verify already does this)
-    // - Checking token usage (e.g., token not in a denied list)
-    // - Checking custom claims
+    // Build context with user claims for backend authorization
+    const context = {
+      sub: decoded.sub,
+      email: decoded.email || '',
+      role: decoded['custom:role'] || 'user',
+      username: decoded.username || ''
+    };
 
-    // Return an Allow policy
-    return generatePolicy(decoded.sub, 'Allow', event.methodArn);
+    // Return an Allow policy with context
+    return generatePolicy(decoded.sub, 'Allow', event.methodArn, context);
   } catch (error) {
     console.error('Error authorizing request:', error);
 

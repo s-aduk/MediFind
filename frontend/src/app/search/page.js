@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { searchMedicines } from '@/lib/api';
+import { useState, useCallback } from 'react';
+import { searchMedicines, getPharmaciesForMedicine } from '@/lib/api';
 import { ArrowRight, MapPin, Pill, Rx } from 'lucide-react';
 
 export default function SearchPage() {
@@ -7,25 +7,50 @@ export default function SearchPage() {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [medicines, setMedicines] = useState([]);
+  const [selectedMedicine, setSelectedMedicine] = useState(null);
 
-  const handleSearch = async (e) => {
+  const handleSearch = useCallback(async (e) => {
     e.preventDefault();
     if (!query.trim()) {
       setResults([]);
+      setMedicines([]);
       return;
     }
 
     setLoading(true);
     setError('');
     try {
-      const data = await searchMedicines(query.trim());
-      setResults(data);
+      // Step 1: Search for medicines matching the query
+      const medicineData = await searchMedicines(query.trim());
+      
+      // The API returns { count, items, searchTerm }
+      const medicineItems = medicineData.items || medicineData || [];
+      setMedicines(medicineItems);
+      
+      if (medicineItems.length === 0) {
+        setResults([]);
+        return;
+      }
+      
+      // Step 2: For the first matched medicine (or user-selected), get pharmacies
+      // Use the first medicine's name to search pharmacies
+      const firstMedicine = medicineItems[0];
+      const medicineName = firstMedicine.medicine_name || firstMedicine.name || query.trim();
+      setSelectedMedicine(medicineName);
+      
+      const pharmacyData = await getPharmaciesForMedicine(medicineName);
+      
+      // The pharmacy API returns { count, items, lastEvaluatedKey }
+      const pharmacyItems = pharmacyData.items || pharmacyData || [];
+      setResults(pharmacyItems);
     } catch (err) {
       setError(err.message);
+      setResults([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [query]);
 
   // Handle Enter key press
   const handleKeyPress = (e) => {

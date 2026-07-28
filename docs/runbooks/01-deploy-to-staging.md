@@ -32,25 +32,15 @@ npm run build
 ### 2. Package and Deploy Backend Infrastructure
 ```bash
 cd infrastructure
-# Validate the SAM template
 sam validate
+sam build
 
-# Package the application
-sam package \
-    --s3-bucket $S3_BUCKET \
-    --output-template-file packaged.yaml \
-    --region $AWS_REGION \
-    --profile $AWS_PROFILE
-
-# Deploy to CloudFormation
 sam deploy \
-    --template-file packaged.yaml \
     --stack-name $STACK_NAME \
     --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-    --parameter-overrides \
-        Environment=staging \
-        EnableWAF=false \
-        LoggingLevel=INFO \
+    --parameter-overrides EnvironmentName=staging \
+    --resolve-s3 \
+    --no-confirm-changeset \
     --region $AWS_REGION \
     --profile $AWS_PROFILE \
     --no-fail-on-empty-changeset \
