@@ -43,12 +43,12 @@ MediFind connects patients with nearby pharmacies that have specific medications
 
 ```mermaid
 flowchart LR
-    subgraph Frontend[Frontend (Next.js)]
+    subgraph Frontend["Frontend (Next.js)"]
         A[React UI] --> B[Next.js App Router]
-        B --> C[AWS Amplify (Auth)]
+        B --> C["AWS Amplify (Auth)"]
         B --> D[API Gateway Calls]
     end
-    subgraph Backend[Backend (AWS)]
+    subgraph Backend["Backend (AWS)"]
         D --> E[API Gateway]
         E --> F[Lambda: Medicine Search]
         E --> G[Lambda: Get Pharmacies]
