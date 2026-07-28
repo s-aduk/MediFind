@@ -44,41 +44,38 @@ MediFind connects patients with nearby pharmacies that have specific medications
 ```mermaid
 flowchart LR
     subgraph Frontend["Frontend (Next.js)"]
-        A[React UI] --> B[Next.js App Router]
+        A["React UI"] --> B["Next.js App Router"]
         B --> C["AWS Amplify (Auth)"]
-        B --> D[API Gateway Calls]
+        B --> D["API Gateway Calls"]
     end
+
     subgraph Backend["Backend (AWS)"]
-        D --> E[API Gateway]
-        E --> F[Lambda: Medicine Search]
-        E --> G[Lambda: Get Pharmacies]
-        E --> H[Lambda: Create Order]
-        E --> I[Lambda: Admin Pharmacy]
-        E --> J[Lambda: Admin Inventory]
-        E --> K[Lambda: JWT Authorizer]
-        F --> L[(DynamoDB)]
+        D --> E["API Gateway"]
+        E --> F["Lambda: Medicine Search"]
+        E --> G["Lambda: Get Pharmacies"]
+        E --> H["Lambda: Create Order"]
+        E --> I["Lambda: Admin Pharmacy"]
+        E --> J["Lambda: Admin Inventory"]
+        E --> K["Lambda: JWT Authorizer"]
+        F --> L[("DynamoDB")]
         G --> L
         H --> L
         I --> L
         J --> L
         K --> L
-        L --> M[CloudWatch Logs & Metrics]
-        N[X-Ray Tracing] --> E
+        L --> M["CloudWatch Logs & Metrics"]
+        N["X-Ray Tracing"] --> E
     end
-    style A fill:#f9f,stroke:#333,stroke-width:1px
-    style B fill:#f9f,stroke:#333,stroke-width:1px
-    style C fill:#f9f,stroke:#333,stroke-width:1px
-    style D fill:#f9f,stroke:#333,stroke-width:1px
-    style E fill:#bbf,stroke:#333,stroke-width:1px
-    style F fill:#bbf,stroke:#333,stroke-width:1px
-    style G fill:#bbf,stroke:#333,stroke-width:1px
-    style H fill:#bbf,stroke:#333,stroke-width:1px
-    style I fill:#bbf,stroke:#333,stroke-width:1px
-    style J fill:#bbf,stroke:#333,stroke-width:1px
-    style K fill:#bbf,stroke:#333,stroke-width:1px
-    style L fill:#bfb,stroke:#333,stroke-width:1px
-    style M fill:#ff9,stroke:#333,stroke-width:1px
-    style N fill:#ff9,stroke:#333,stroke-width:1px
+
+    classDef frontend fill:#eef2ff,stroke:#4f46e5,color:#111827,stroke-width:1.5px;
+    classDef backend fill:#f0fdfa,stroke:#0f766e,color:#111827,stroke-width:1.5px;
+    classDef data fill:#f7fee7,stroke:#65a30d,color:#111827,stroke-width:1.5px;
+    classDef observability fill:#fff7ed,stroke:#c2410c,color:#111827,stroke-width:1.5px;
+
+    class A,B,C,D frontend;
+    class E,F,G,H,I,J,K backend;
+    class L data;
+    class M,N observability;
 ```
 
 *Diagram shows data flow from the Next.js frontend through API Gateway to Lambda functions that interact with DynamoDB. Observability is provided by CloudWatch and AWS X‑Ray.*
