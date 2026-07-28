@@ -58,23 +58,33 @@ export default function Login({ onLogin }) {
 
   if (showVerification) {
     return (
-      <div className="max-w-md mx-auto mt-10 p-6 border rounded">
-        <h2 className="text-2xl font-bold mb-4">Verify Your Email</h2>
-        <p className="mb-4">A verification code was sent to {tempEmail}</p>
-        <form onSubmit={handleVerify}>
-          <input
-            type="text"
-            value={verificationCode}
-            onChange={(e) => setVerificationCode(e.target.value)}
-            placeholder="Enter verification code"
-            className="w-full p-2 border rounded mb-2"
-            required
-          />
-          {error && <p className="text-red-500">{error}</p>}
+      <div className="max-w-md mx-auto mt-14 bg-white rounded-xl shadow-lg p-8 space-y-6">
+        <h2 className="text-2xl font-bold text-gray-900 text-center">Verify Your Email</h2>
+        <p className="text-gray-600 text-center mb-4">A verification code was sent to {tempEmail}</p>
+        <form onSubmit={handleVerify} className="space-y-4">
+          <div>
+            <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-700 mb-2">
+              Verification Code
+            </label>
+            <input
+              id="verificationCode"
+              type="text"
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value)}
+              placeholder="Enter verification code"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+              required
+            />
+          </div>
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+              <p className="font-medium">{error}</p>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-500 text-white p-2 rounded"
+            className="w-full bg-gradient-to-r from-green-600 to-green-400 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity shadow-lg transform hover:-translate-y-1 flex items-center justify-center space-x-2"
           >
             {loading ? 'Verifying...' : 'Verify Email'}
           </button>
@@ -84,58 +94,81 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border rounded">
-      <h2 className="text-2xl font-bold mb-4">
-        {isSignUp ? 'Sign Up' : 'Log In'}
+    <div className="max-w-md mx-auto mt-14 bg-white rounded-xl shadow-lg p-8 space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900 text-center">
+        {isSignUp ? 'Create Account' : 'Welcome Back'}
       </h2>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} className="space-y-5">
         {isSignUp && (
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              Full Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your full name"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+              required
+            />
+          </div>
+        )}
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            Email Address
+          </label>
           <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Full Name"
-            className="w-full p-2 border rounded mb-2"
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Enter your email"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
             required
           />
+        </div>
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Create a strong password"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+            required
+            minLength="8"
+          />
+        </div>
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+            <p className="font-medium">{error}</p>
+          </div>
         )}
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          className="w-full p-2 border rounded mb-2"
-          required
-        />
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Password (min 8 chars, uppercase, special)"
-          className="w-full p-2 border rounded mb-2"
-          required
-        />
-        {error && <p className="text-red-500">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-500 text-white p-2 rounded"
+          className="w-full bg-gradient-to-r from-green-600 to-green-400 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity shadow-lg transform hover:-translate-y-1 flex items-center justify-center space-x-2"
         >
-          {loading ? 'Loading...' : isSignUp ? 'Sign Up' : 'Log In'}
+          {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
         </button>
       </form>
-      <p className="mt-2 text-center">
+      <div className="text-center text-sm text-gray-600">
         {isSignUp ? 'Already have an account?' : "Don't have an account?"}
         <button
           onClick={() => {
             setIsSignUp(!isSignUp);
             setError('');
           }}
-          className="text-blue-500 ml-1"
+          className="font-medium text-green-600 hover:text-green-500 ml-1"
         >
-          {isSignUp ? 'Log In' : 'Sign Up'}
+          {isSignUp ? 'Sign In' : 'Create Account'}
         </button>
-      </p>
+      </div>
     </div>
   );
 }

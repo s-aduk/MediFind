@@ -1,0 +1,20 @@
+{
+  "name": "medifind-backend",
+  "version": "1.0.0",
+  "description": "Backend Lambda functions for MediFind",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:unit": "jest --testPathPattern=__tests__",
+    "test:integration": "jest --testPathPattern=integration",
+    "lint": "eslint . --ext .js",
+    "lint:fix": "eslint . --ext .js --fix"
+  },
+  "workspaces": [
+    "src/functions/*"
+  ],
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "eslint": "^8.0.0"
+  }
+}
