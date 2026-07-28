@@ -95,7 +95,7 @@ export default function SearchMedicine({ onSelectMedicine }) {
               {results.length} Pharmacies Found
             </h2>
             <p className="text-sm text-gray-500">
-              Showing results for "{query}"
+              Showing results for ""{query}""
             </p>
           </div>
 
@@ -116,7 +116,7 @@ export default function SearchMedicine({ onSelectMedicine }) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">
-                      {pharm.distance?.toFixed(1) + ' km'} || 'Nearby'
+                      {pharm.distance?.toFixed(1) + '&apos; &#32;km&apos;'} || '&apos;Nearby&apos;'
                     </span>
                   </div>
                 </div>
@@ -165,7 +165,7 @@ export default function SearchMedicine({ onSelectMedicine }) {
                     <div>
                       <p className="text-sm font-medium text-gray-900">Last Updated</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(pharm.last_updated || pharm.updated_at || Date.now()).toLocaleDateString()}
+                        {new Date(pharm.last_updated || pharm.updated_at || new Date()).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -193,7 +193,7 @@ export default function SearchMedicine({ onSelectMedicine }) {
             <Rx className="h-8 w-8 text-green-400" />
           </div>
           <h3 className="text-lg font-bold text-gray-900 mb-3">
-            No pharmacies found for "{query}"
+            No pharmacies found for ""{query}""
           </h3>
           <p className="text-gray-600 mb-4">
             Try checking the spelling or searching for a different medication

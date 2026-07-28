@@ -83,15 +83,15 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">
-                      {pharm.distance?.toFixed(1) + ' km'} || 'Nearby'
+                      {pharm.distance?.toFixed(1) + '&apos; &#32;km&apos;'} || '&apos;Nearby&apos;'
                     </span>
                   </div>
                 </div>
 
                 {pharm.address && (
-                  <p className="text-gray-600 className="text-gray-600 mb-2 flex items-center">
+                  <p className="text-gray-600 mb-2 flex items-center">
                     <MapPin className="h-4 w-4 mr-2 text-green-500" /> {pharm.address}
-                  </p0>
+                  </p>
                 )}
 
                 <div className="grid gap-3 mt-3">
@@ -132,7 +132,7 @@ export default function PharmaciesList({ medicineId, medicineName, onOrder }) {
                     <div>
                       <p className="text-sm font-medium text-gray-900">Last Updated</p>
                       <p className="text-sm text-gray-500">
-                        {new Date(pharm.last_updated || pharm.updated_at || Date.now()).toLocaleDateString()}
+                        {new Date(pharm.last_updated || pharm.updated_at || new Date()).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

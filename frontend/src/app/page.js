@@ -30,7 +30,7 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="font-semibold mb-3">Search Medicines</h3>
-              <p className="text-gray-600">Enter the name of the medicine you're looking for and see real-time availability</p>
+              <p className="text-gray-600">Enter the name of the medicine you&apos;re looking for and see real-time availability</p>
             </div>
 
             <div className="text-center p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">

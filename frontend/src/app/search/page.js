@@ -46,7 +46,7 @@ export default function SearchPage() {
             <div className="flex items-center space-x-4">
               <button
                 className="p-2 rounded hover:bg-gray-100 transition-colors"
-                onClick={() => {/* Profile dropdown */}
+                onClick={() => {/* Profile dropdown */}}
               >
                 <svg className="h-5 w-5 text-gray-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="8" r="4"></circle>
@@ -122,7 +122,7 @@ export default function SearchPage() {
                   {results.length} Pharmacies Found
                 </h2>
                 <p className="text-sm text-gray-500">
-                  Showing results for "{query}"
+                  Showing results for ""{query}""
                 </p>
               </div>
 
@@ -212,8 +212,10 @@ export default function SearchPage() {
                         </button>
                       </div>
                     </div>
-                  }
-                ))}
+                  </div>
+                )
+                )
+                }
               </div>
             </>
           )}
@@ -225,8 +227,8 @@ export default function SearchPage() {
                 <Rx className="h-10 w-10 text-green-400" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-4">
-                No pharmacies found for "{query}"
-              </p>
+                No pharmacies found for ""{query}""
+              </h3>
               <p className="text-gray-600 mb-6">
                 Try checking the spelling or searching for a different medication
               </p>
