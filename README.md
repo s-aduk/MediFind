@@ -7,7 +7,7 @@
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://reactjs.org/)
 [![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange?logo=awslambda)](https://aws.amazon.com/lambda/)
 [![Amazon DynamoDB](https://img.shields.io/badge/DynamoDB-NoSQL-4053D6?logo=amazon-dynamodb)](https://aws.amazon.com/dynamodb/)
-[![Amazon API Gateway](https://img.shields.io/badge/API_Gateway-gateway-FF9900?logo=amazon)](https://aws.amazon.com/api-gateway/)
+[![Amazon API Gateway](https://img.shields.io/badge/API_Gateway-gateway-FF9900?logo=amazon-apigateway)](https://aws.amazon.com/api-gateway/)
 [![Amazon Cognito](https://img.shields.io/badge/Cognito-Auth-purple?logo=amazon-cognito)](https://aws.amazon.com/cognito/)
 [![GitHub Actions](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=github-actions)](https://github.com/s-aduk/MediFind/actions)
 
@@ -462,6 +462,5 @@ Make sure your PR passes all linting and tests before requesting review.
 ---
 
 <div align="center">
-  Made with ❤️ and ☕ by the MediFind Team<br>
   <a href="https://github.com/s-aduk/MediFind">github.com/s-aduk/MediFind</a>
 </div>
