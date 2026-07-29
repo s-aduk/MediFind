@@ -111,3 +111,5 @@ lerna-debug.log
 .pnp.*
 .pnp.js
 FIXES.md
+AGENTS.md
+CLAUDE.md
