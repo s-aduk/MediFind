@@ -1,9 +1,9 @@
 # 🏥 MediFind - Modern Medicine Finder
 
-> A sleek, production‑ready application for finding medicines at nearby pharmacies, built with **AWS serverless** technologies and **Next.js 14**.
+> A production-ready application for finding medicines at nearby pharmacies, built with **AWS serverless** technologies and **Next.js 16 (App Router)**.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://reactjs.org/)
 [![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange?logo=awslambda)](https://aws.amazon.com/lambda/)
 [![Amazon DynamoDB](https://img.shields.io/badge/DynamoDB-NoSQL-4053D6?logo=amazon-dynamodb)](https://aws.amazon.com/dynamodb/)
@@ -43,14 +43,14 @@ MediFind connects patients with nearby pharmacies that have specific medications
 
 ```mermaid
 flowchart LR
-    subgraph Frontend["Frontend (Next.js)"]
-        A["React UI"] --> B["Next.js App Router"]
+    subgraph Frontend["Frontend (Next.js 16)"]
+        A["React 19 UI"] --> B["Next.js App Router"]
         B --> C["AWS Amplify (Auth)"]
         B --> D["API Gateway Calls"]
     end
 
-    subgraph Backend["Backend (AWS)"]
-        D --> E["API Gateway"]
+    subgraph Backend["Backend (AWS Serverless)"]
+        D --> E["API Gateway (REST)"]
         E --> F["Lambda: Medicine Search"]
         E --> G["Lambda: Get Pharmacies"]
         E --> H["Lambda: Create Order"]
@@ -78,7 +78,7 @@ flowchart LR
     class M,N observability;
 ```
 
-*Diagram shows data flow from the Next.js frontend through API Gateway to Lambda functions that interact with DynamoDB. Observability is provided by CloudWatch and AWS X‑Ray.*
+*Diagram shows data flow from the Next.js frontend through API Gateway to Lambda functions that interact with DynamoDB. Observability is provided by CloudWatch and AWS X-Ray.*
 
 ## Data Flow Diagram
 
@@ -100,13 +100,13 @@ sequenceDiagram
     AG->>Auth: Validate JWT (if present)
     Auth-->>AG: Allow / Deny
     AG->>LS: Invoke MedicineSearch Lambda
-    LS->>DB: Query medicines (GSI)
+    LS->>DB: Query medicines (scan with filter)
     DB-->>LS: Return matches
     LS-->>AG: JSON response (medicine list)
     AG-->>FE: Return data
     FE->>FE: Display results
     User->>FE: Click pharmacy card
-    FE->>AG: GET /pharmacies?medicineId=123
+    FE->>AG: GET /pharmacies/{medicineName}
     AG->>Auth: Validate JWT
     Auth-->>AG: Allow
     AG->>LP: Invoke GetPharmacies Lambda
@@ -139,32 +139,33 @@ sequenceDiagram
 
 | Feature | Description |
 |---------|-------------|
-| **🔍 Medicine Search** | Instant search by name (partial match) with relevance ranking. |
+| **🔍 Medicine Search** | Instant search by name (case-insensitive, partial match) with relevance ranking. |
 | **🏥 Pharmacy Listings** | See which nearby pharmacies have the medicine in stock, with distance, price, and inventory. |
-| **💊 Price & Availability** | Real‑time pricing and stock levels; out‑of‑stock items clearly marked. |
+| **💊 Price & Availability** | Real-time pricing and stock levels; out-of-stock items clearly marked. |
 | **🧾 Order Management** | Place orders, specify quantity, choose pharmacy, receive confirmation & tracking. |
-| **🔐 Secure Authentication** | Email/password via Amazon Cognito (sign‑up, verification, sign‑in, password reset). |
-| **⚙️ Admin Panel** | CRUD for pharmacies, inventory updates, stock‑level alerts, order oversight. |
-| **📱 Responsive Design** | Mobile‑first layout works on phones, tablets, and desktops. |
-| **☁️ Serverless Backend** | Fully managed AWS Lambda, API Gateway, DynamoDB – zero‑server ops. |
+| **🔐 Secure Authentication** | Email/password via Amazon Cognito (sign-up, verification, sign-in, password reset). |
+| **⚙️ Admin Panel** | CRUD for pharmacies, inventory updates, stock-level alerts, order oversight. |
+| **📱 Responsive Design** | Mobile-first layout works on phones, tablets, and desktops. |
+| **☁️ Serverless Backend** | Fully managed AWS Lambda, API Gateway, DynamoDB – zero-server ops. |
 | **📦 Infrastructure as Code** | AWS SAM template defines all resources; reproducible deployments. |
-| **🛡️ Security Best Practices** | Least‑privilege IAM, input validation, CORS, XSS/CSRF protection, environment‑specific config. |
-| **📊 Observability** | CloudWatch Logs, Metrics, custom business KPIs, AWS X‑Ray tracing. |
+| **🛡️ Security Best Practices** | Least-privilege IAM, input validation, CORS, XSS/CSRF protection, environment-specific config. |
+| **📊 Observability** | CloudWatch Logs, Metrics, custom business KPIs, AWS X-Ray tracing. |
+
+---
 
 ## 🛠️ Tech Stack
 
 | Category | Technology | Version / Notes |
 |----------|------------|-----------------|
-| **Frontend** | Next.js (App Router) | 14.2.x |
+| **Frontend** | Next.js (App Router) | 16.2.x |
 | | React | 19.x |
-| | TypeScript (optional) | – |
-| | Styling | CSS Modules + Custom Properties (design tokens) |
+| | TypeScript | Not used (JavaScript with JSDoc) |
+| | Styling | CSS Modules + CSS Custom Properties (design tokens) |
 | | UI Icons | Lucide React |
 | | Auth | AWS Amplify (Cognito) |
-| | State | React Query / SWR (optional) |
-| **Backend** | AWS Lambda (Node.js) | 18.x runtime |
+| **Backend** | AWS Lambda (Node.js) | 22.x runtime |
 | | API Gateway | REST API |
-| | Data Store | Amazon DynamoDB (single‑table design) |
+| | Data Store | Amazon DynamoDB (single-table design) |
 | | Auth | Amazon Cognito User Pools + JWT Authorizer |
 | | Infrastructure | AWS SAM (CloudFormation) |
 | | Dependencies | AWS SDK v3, Middy (middleware), Joi (validation) |
@@ -175,8 +176,10 @@ sequenceDiagram
 | | Linting | ESLint (with `eslint-config-next`) |
 | | Formatting | Prettier |
 | **Monitoring** | CloudWatch Logs & Metrics | – |
-| | AWS X‑Ray | Distributed tracing |
+| | AWS X-Ray | Distributed tracing |
 | | Custom Dashboards | CloudWatch (optional) |
+
+---
 
 ## 🚀 Getting Started
 
@@ -204,7 +207,7 @@ sequenceDiagram
    npm ci               # install Node.js dependencies
    # (if you prefer a Python venv for the seed script)
    # python -m venv .venv && source .venv/bin/activate
-   # pip install -r requirements.txt   # if a requirements.txt exists
+   # pip install boto3   # if requirements.txt exists
    ```
 
 3. **Frontend setup**
@@ -221,7 +224,7 @@ sequenceDiagram
    # Edit the .env files with your local values, e.g.:
    #   NEXT_PUBLIC_API_URL=http://localhost:3000/dev
    #   AWS_PROFILE=mydevprofile
-   #   AWS_REGION=eu-north-1
+   #   AWS_REGION=us-east-1
    ```
 
 ### Running Locally
@@ -237,13 +240,14 @@ npm run dev   # → http://localhost:3000
 cd backend
 # Example: invoke the medicine search function
 sam local invoke MedicineSearchFunction -e events/event.json
-# You can also start the API locally:
+
+# Or start the API locally:
 sam local start-api
 ```
 
 ### Deployment
 
-Full, step‑by‑step procedures are in the `docs/runbooks/` folder:
+Full, step-by-step procedures are in the `docs/runbooks/` folder:
 
 1. **[Deploy to Staging](docs/runbooks/01-deploy-to-staging.md)**
 2. **[Deploy to Production](docs/runbooks/02-deploy-to-production.md)**
@@ -259,7 +263,7 @@ sam build
 # 2. Deploy (guided first time)
 sam deploy --guided \
   --stack-name medifind-staging \
-  --region eu-north-1 \
+  --region us-east-1 \
   --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
   --parameter-overrides Environment=staging
 
@@ -273,46 +277,71 @@ python seed_data.py   # reads credentials from ~/.aws or env vars
 
 > **Tip**: Use separate AWS profiles (`export AWS_PROFILE=staging` / `prod`) or environment variables to avoid mixing accounts.
 
+---
+
 ## 📂 Project Structure
 
 ```
 MediFind/
-├── backend/                     # Lambda functions (Node.js)
+├── backend/                     # Lambda functions (Node.js 22.x)
 │   ├── src/
 │   │   └── functions/
-│   │       ├── medicine-search/
-│   │       ├── get-pharmacies/
-│   │       ├── create-order/
-│   │       ├── admin-inventory/
-│   │       ├── admin-pharmacy/
-│   │       └── jwt-authorizer/
+│   │       ├── medicine-search/   # GET /search?q=<query>
+│   │       ├── get-pharmacies/    # GET /pharmacies/{medicineName}
+│   │       ├── create-order/      # POST /orders
+│   │       ├── admin-inventory/   # CRUD /admin/inventory
+│   │       ├── admin-pharmacy/    # CRUD /admin/pharmacies
+│   │       └── jwt-authorizer/    # Cognito JWT validation
 │   ├── package.json
 │   ├── jest.config.js
 │   ├── babel.config.js
-│   └── seed_data.py            # populates DynamoDB with sample data
-├── frontend/                    # Next.js 14 application
+│   └── seed_data.py             # populates DynamoDB with sample data
+├── frontend/                    # Next.js 16 application
 │   ├── src/
-│   │   ├── app/               # App Router pages & layouts
-│   │   ├── components/        # Reusable UI pieces
-│   │   └── lib/               # API service, auth helpers, utils
+│   │   ├── app/                 # App Router pages & layouts
+│   │   │   ├── page.js          # Landing page
+│   │   │   ├── layout.js        # Root layout
+│   │   │   ├── globals.css      # Design tokens + global styles
+│   │   │   ├── search/
+│   │   │   │   └── page.js      # Search & pharmacy results
+│   │   │   └── login/
+│   │   │       └── page.js      # Login / Sign-up page
+│   │   ├── components/          # Reusable UI pieces
+│   │   │   ├── SearchMedicine.js
+│   │   │   ├── PharmaciesList.js
+│   │   │   └── Login.js
+│   │   └── lib/                 # API service, auth helpers
+│   │       ├── api.js
+│   │       └── auth.js
 │   ├── next.config.mjs
 │   ├── eslint.config.mjs
 │   ├── package.json
-│   └── README.md             # (optional) frontend‑specific notes
-├── infrastructure/             # AWS SAM template
-│   └── template.yaml          # defines all AWS resources
+│   └── README.md                # Frontend-specific notes
+├── infrastructure/              # AWS SAM template
+│   └── template.yaml            # Defines all AWS resources
 ├── docs/
-│   ├── adr/                  # Architecture Decision Records
-│   └── runbooks/             # Operational procedures (deployment, rollback, seeding, etc.)
+│   ├── adr/                     # Architecture Decision Records
+│   │   ├── 0001-use-aws-sam-for-infrastructure.md
+│   │   ├── 0002-dynamodb-single-table-design.md
+│   │   ├── 0003-lambda-function-per-bounded-context.md
+│   │   ├── 0004-cognito-for-authentication.md
+│   │   └── 0005-nextjs-app-router.md
+│   └── runbooks/                # Operational procedures
+│       ├── 01-deploy-to-staging.md
+│       ├── 02-deploy-to-production.md
+│       ├── 03-rollback-procedure.md
+│       └── 04-database-seeding.md
 ├── .github/
 │   └─ workflows/
-│       └─ deploy.yml        # GitHub Actions CI/CD
-├── .env.example              # template for environment variables
-├── .gitignore                # ignore patterns for repo
-├── LICENSE                   # MIT licence
-├── CONTRIBUTING.md           # contribution guidelines
-└── README.md                 # this file
+│       └─ deploy.yml           # GitHub Actions CI/CD
+├── .env.example                # Template for environment variables
+├── .gitignore
+├── LICENSE                     # MIT licence
+├── CONTRIBUTING.md             # Contribution guidelines
+└── README.md                   # This file
 ```
+
+---
 
 ## 🔌 API Endpoints
 
@@ -320,15 +349,22 @@ All endpoints are relative to the deployed API Gateway stage (e.g. `https://<id>
 
 | Method | Endpoint | Description | Auth |
 |--------|----------|-------------|------|
-| `GET`  | `/search?q=<query>` | Search medicines by name (case‑insensitive, partial) | ❌ |
-| `GET`  | `/pharmacies?medicineId=<id>` | List pharmacies that have the given medicine in stock | ❌ |
+| `GET`  | `/search?q=<query>` | Search medicines by name (case-insensitive, partial) | ❌ |
+| `GET`  | `/pharmacies/{medicineName}` | List pharmacies that have the given medicine in stock | ❌ |
 | `POST` | `/orders` | Create a new order (requires JWT) | ✅ |
-| `POST` | `/admin/pharmacy` | Register a new pharmacy (admin only) | ✅ |
-| `POST` | `/admin/inventory` | Update inventory levels for a pharmacy/medicine (admin) | ✅ |
+| `POST` | `/admin/pharmacies` | Register a new pharmacy (admin only) | ✅ |
+| `GET`  | `/admin/pharmacies` | List all pharmacies (admin) | ✅ |
+| `GET`  | `/admin/pharmacies/{pharmacyId}` | Get specific pharmacy (admin) | ✅ |
+| `PUT`  | `/admin/pharmacies/{pharmacyId}` | Update pharmacy (admin) | ✅ |
+| `DELETE`| `/admin/pharmacies/{pharmacyId}` | Delete pharmacy (admin) | ✅ |
+| `POST` | `/admin/inventory` | Create inventory record (admin) | ✅ |
+| `GET`  | `/admin/inventory` | List inventory with filters (admin) | ✅ |
+| `PUT`  | `/admin/inventory` | Update inventory item (admin) | ✅ |
+| `DELETE`| `/admin/inventory` | Delete inventory item (admin) | ✅ |
 | `GET`  | `/health` | Liveness probe (used by ALB/APIGW) | ❌ |
-| *Additional admin endpoints* (e.g. `/admin/orders`, `/admin/users`) are defined in `template.yaml` as needed. |
 
 **Standard response envelope**
+
 ```json
 {
   "success": true,
@@ -341,7 +377,9 @@ All endpoints are relative to the deployed API Gateway stage (e.g. `https://<id>
   }
 }
 ```
+
 On error:
+
 ```json
 {
   "success": false,
@@ -351,12 +389,14 @@ On error:
 }
 ```
 
+---
+
 ## 🧪 Testing
 
 ### Backend
 ```bash
 cd backend
-npm test            # runs Jest unit+integration tests
+npm test            # runs Jest unit + integration tests
 # With coverage:
 npm run test:cov
 ```
@@ -374,25 +414,32 @@ npm run test:cov
 # Backend
 cd backend
 npm run lint
+npm run lint:fix
 
 # Frontend
 cd frontend
 npm run lint
+# Formatting (optional):
+npm run format      # uses Prettier
 ```
-> **Formatting** (optional): `npm run format` (uses Prettier) is available in both packages.
 
 ### Coverage Goal
 Maintain **≥80%** statement, branch, and function coverage across unit & integration tests.
+
+---
 
 ## 📜 License
 
 This project is licensed under the **MIT License** – see the [`LICENSE`](LICENSE) file for details.
 
+---
+
 ## 🤝 Contributing
 
-We 💖 contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct, pull‑request process, and development workflow.
+We 💖 contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct, pull-request process, and development workflow.
 
 **Quick contribution flow**
+
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feat/amazing-feature`
 3. Commit your changes: `git commit -m 'feat: add amazing feature'`
@@ -401,14 +448,16 @@ We 💖 contributions! Please read our [Contributing Guidelines](CONTRIBUTING.md
 
 Make sure your PR passes all linting and tests before requesting review.
 
+---
+
 ## 🙏 Acknowledgements
 
-- **[AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/)** – effortless IaC for Lambda, API Gateway, DynamoDB, and more.  
-- **[Next.js](https://nextjs.org/) & [React](https://reactjs.org/)** – modern React framework with server‑components and incremental static regeneration.  
-- **[AWS Amplify](https://aws.amazon.com/amplify/)** – seamless Cognito integration for auth flows.  
-- **[Lucide Icons](https://lucide.dev/)** – beautiful, open‑source SVG icons used throughout the UI.  
-- **[Shields.io](https://shields.io/)** – for the project badges you see above.  
-- The open‑source community for countless libraries, utilities, and best‑practice guides that make this project possible.
+- **[AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/)** – effortless IaC for Lambda, API Gateway, DynamoDB, and more.
+- **[Next.js](https://nextjs.org/) & [React](https://reactjs.org/)** – modern React framework with server-components and incremental static regeneration.
+- **[AWS Amplify](https://aws.amazon.com/amplify/)** – seamless Cognito integration for auth flows.
+- **[Lucide Icons](https://lucide.dev/)** – beautiful, open-source SVG icons used throughout the UI.
+- **[Shields.io](https://shields.io/)** – for the project badges you see above.
+- The open-source community for countless libraries, utilities, and best-practice guides that make this project possible.
 
 ---
 
