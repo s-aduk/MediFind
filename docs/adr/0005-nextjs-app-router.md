@@ -29,7 +29,7 @@ Chose Next.js App Router because:
 - Excellent TypeScript support out of the box
 - Incremental Static Regeneration (ISR) for hybrid rendering strategies
 - API routes option for backend-for-frontend patterns if needed
-- Strong community and Vercel integration (though we're deploying to AWS via Amplify or custom)
+- Strong community and Vercel integration (though we're deploying to AWS via **Amplify Hosting**)
 
 ## Implementation Details
 - Used `app/` directory structure with `layout.js`, `page.js`, and route-specific folders
@@ -50,5 +50,5 @@ Chose Next.js App Router because:
 
 ## Related Decisions
 - 0004: Integrates with Cognito authentication via Next.js middleware or custom hooks
-- Infrastructure: Will be deployed via AWS Amplify Hosting or custom S3+CloudFront setup
+- Infrastructure: Will be deployed via **AWS Amplify Hosting** (native Next.js support with SSR/ISR)
 - Performance: Aligns with web performance rules (automatic code splitting, image optimization)

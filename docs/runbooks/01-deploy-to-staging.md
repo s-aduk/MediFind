@@ -21,68 +21,43 @@ export S3_BUCKET=medifind-deployments-staging
 
 ## Deployment Steps
 
-### 1. Prepare Frontend Build (if changes exist)
-```bash
-cd frontend
-npm ci
-npm run build
-# Output is in .next directory
-```
-
-### 2. Package and Deploy Backend Infrastructure
+### 1. Deploy Backend Infrastructure (AWS SAM)
 ```bash
 cd infrastructure
 # Validate the SAM template
 sam validate
 
-# Package the application
-sam package \
-    --s3-bucket $S3_BUCKET \
-    --output-template-file packaged.yaml \
-    --region $AWS_REGION \
-    --profile $AWS_PROFILE
-
-# Deploy to CloudFormation
-sam deploy \
-    --template-file packaged.yaml \
+# Deploy using guided mode (first time) or saved config
+sam deploy --guided \
     --stack-name $STACK_NAME \
-    --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-    --parameter-overrides \
-        Environment=staging \
-        EnableWAF=false \
-        LoggingLevel=INFO \
-    --region $AWS_REGION \
-    --profile $AWS_PROFILE \
-    --no-fail-on-empty-changeset \
-    --tags Environment=staging Team=medifind
-```
-
-### 3. Upload Frontend Assets (if using S3+CloudFront)
-```bash
-# If deploying frontend to S3
-aws s3 sync frontend/.next s3://medifind-frontend-staging._your_account_id_.us-east-1/ \
-    --delete \
     --profile $AWS_PROFILE \
     --region $AWS_REGION
-
-# Invalidate CloudFront cache (if applicable)
-aws cloudfront create-invalidation \
-    --distribution-id EABCDEFGHIJKL \
-    --paths "/*" \
-    --profile $AWS_PROFILE
 ```
 
-### 4. Update Environment Variables in Parameter Store (if needed)
+For subsequent deployments, use saved configuration:
 ```bash
-aws ssm put-parameter \
-    --name "/medifind/staging/API_URL" \
-    --value "https://api.staging.medifind.example.com/dev" \
-    --type String \
-    --overwrite \
-    --profile $AWS_PROFILE
+sam deploy --stack-name $STACK_NAME --profile $AWS_PROFILE --no-fail-on-empty-changeset
 ```
 
-### 5. Run Database Migrations/Seed Data (if schema changed)
+### 2. Frontend Deployment (AWS Amplify Hosting)
+
+**Frontend is deployed automatically via Amplify on git push.** No manual steps required.
+
+Ensure your repository is connected to Amplify Console:
+- Branch `staging` → Amplify app `medifind-staging`
+- Push to `staging` branch triggers auto-deploy
+- Preview URLs generated for every PR
+
+### 3. Update Environment Variables in Amplify Console (if needed)
+If stack outputs changed (API URL, Cognito IDs), update in Amplify Console:
+1. Go to Amplify Console → App → Environment variables
+2. Update:
+   - `NEXT_PUBLIC_API_URL`
+   - `NEXT_PUBLIC_COGNITO_USER_POOL_ID`
+   - `NEXT_PUBLIC_COGNITO_CLIENT_ID`
+   - `NEXT_PUBLIC_COGNITO_REGION`
+
+### 4. Run Database Migrations/Seed Data (if schema changed)
 ```bash
 cd ../backend
 python seed_data.py --environment staging

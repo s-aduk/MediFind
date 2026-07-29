@@ -29,21 +29,16 @@ Initiate rollback if ANY of the following are true:
 ### Scenario A: Simple Code/Rollback (No Schema Changes)
 Applies when deployment only changed Lambda code or configuration without altering DynamoDB schema.
 
-#### Steps:
+#### Backend (SAM/CloudFormation) Rollback:
 ```bash
 # 1. Identify previous deployment
 STACK_NAME=medifind-production  # or staging
 AWS_PROFILE=mediFind-production
 
-# Get previous template (if saved in S3 during deployment)
-# Alternatively, if you have access to artifacts bucket:
-aws s3 ls s3://medifind-deployments-${AWS_PROFILE#medifind-}/artifacts/ \
-    --recursive | sort | tail -5
-
-# 2. If you saved the packaged template from previous deploy:
+# 2. Re-deploy previous template (if saved)
 aws cloudformation update-stack \
     --stack-name $STACK_NAME \
-    --template-body file:///path/to/previous/packaged.yaml \
+    --template-body file:///path/to/previous/template.yaml \
     --capabilities CAPABILITY_IAM \
     --region $(aws configure get region --profile $AWS_PROFILE) \
     --profile $AWS_PROFILE
@@ -53,6 +48,18 @@ aws cloudformation describe-stacks \
     --stack-name $STACK_NAME \
     --query 'Stacks[0].StackStatus' \
     --profile $AWS_PROFILE
+```
+
+#### Frontend (Amplify) Rollback:
+```bash
+# Option 1: Via Amplify Console (recommended)
+# 1. Open Amplify Console → App → Branch
+# 2. Click "Redeploy" on a previous successful build
+# 3. Or use "Rollback" to any prior deployment
+
+# Option 2: Via Git (revert commit)
+git revert <bad-commit-hash>
+git push origin main  # Triggers Amplify auto-deploy
 ```
 
 ### Scenario B: Rollback with Lambda Layers or Dependencies Changed

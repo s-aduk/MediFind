@@ -16,11 +16,10 @@ Set these in your shell or use a `.env.production` file:
 export AWS_PROFILE=mediFind-production
 export AWS_REGION=us-east-1
 export STACK_NAME=medifind-production
-export S3_BUCKET=medifind-deployments-production
 ```
 
 ## Deployment Steps
-Follow the same steps as in 01-deploy-to-staging.md with these production-specific changes:
+Follow the same approach as in 01-deploy-to-staging.md with these production-specific changes:
 
 ### 1. Pre-Deployment Checks
 - Ensure staging deployment has been running successfully for at least 1 hour
@@ -28,31 +27,27 @@ Follow the same steps as in 01-deploy-to-staging.md with these production-specif
 - Verify disaster recovery backups are current
 - Confirm on-call engineer is available during and after deployment
 
-### 2. Package and Deploy Backend Infrastructure
-Use the same commands as staging but with production parameters:
+### 2. Deploy Backend Infrastructure (Production)
+
+**First-time production deploy (guided):**
 ```bash
 cd infrastructure
-sam validate
+sam deploy --guided \
+    --stack-name medifind-production \
+    --profile medifind-production \
+    --region us-east-1
+```
 
-sam package \
-    --s3-bucket $S3_BUCKET \
-    --output-template-file packaged.yaml \
-    --region $AWS_REGION \
-    --profile $AWS_PROFILE
+When prompted, use production values:
+- `Environment`: `production`
+- `EnableWAF`: `true`
+- `LoggingLevel`: `WARN`
+- `AlarmNotificationEmail`: `ops-team@example.com`
+- Save to samconfig.toml: **Yes**
 
-sam deploy \
-    --template-file packaged.yaml \
-    --stack-name $STACK_NAME \
-    --capabilities CAPABILITY_IAM CAPABILITY_AUTO_EXPAND \
-    --parameter-overrides \
-        Environment=production \
-        EnableWAF=true \
-        LoggingLevel=WARN \
-        AlarmNotificationEmail=ops-team@example.com \
-    --region $AWS_REGION \
-    --profile $AWS_PROFILE \
-    --no-fail-on-empty-changeset \
-    --tags Environment=production Team=medifind
+**Subsequent production deploys (uses saved config):**
+```bash
+sam deploy --stack-name medifind-production --profile medifind-production --no-fail-on-empty-changeset
 ```
 
 ### 3. Production-Specific Parameters
@@ -63,19 +58,10 @@ sam deploy \
 - Consider enabling DynamoDB auto-scaling with higher maximum capacity
 
 ### 4. Frontend Deployment
-Same as staging but to production S3 bucket/CloudFront distribution:
-```bash
-aws s3 sync frontend/.next s3://medifind-frontend-production._your_account_id_.us-east-1/ \
-    --delete \
-    --profile $AWS_PROFILE \
-    --region $AWS_REGION
-
-# Invalidate production CloudFront
-aws cloudfront create-invalidation \
-    --distribution-id EABCDEFGHIJKL_PROD \
-    --paths "/*" \
-    --profile $AWS_PROFILE
-```
+**No manual steps required.** Frontend is deployed automatically by AWS Amplify Hosting:
+- Push to `main` branch → Amplify auto-deploys to production
+- Configure branch settings in Amplify Console: `main` = production
+- Custom domain: `medifind.example.com`
 
 ### 5. Database Operations
 - Generally avoid seeding data in production unless initializing new environment
