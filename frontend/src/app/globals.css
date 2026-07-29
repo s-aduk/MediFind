@@ -1,5 +1,9 @@
 /* Modern Medical Design System - MediFind */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Color Palette - Inspired by trustworthy healthcare brands */
 :root {
   /* Primary Colors - Medical Green shades */
@@ -12,7 +16,7 @@
   --primary-600: #16a34a;
   --primary-700: #15803d;
   --primary-800: #166534;
-  •-primary-900: #14532d;
+  --primary-900: #14532d;
 
   /* Secondary Colors - Soft blues for trust */
   --secondary-50: #f0f9ff;
@@ -134,7 +138,7 @@
     --neutral-50: #374151;
     --neutral-100: #4b5563;
     --neutral-200: #6b7280;
-    --neutral-300: #8d: #9ca3af;
+    --neutral-300: #9ca3af;
     --neutral-400: #d1d5db;
     --neutral-500: #e5e7eb;
     --neutral-600: #f3f4f6;
@@ -377,7 +381,7 @@ textarea::placeholder {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: var(--spacing-1) var(--spacing-3);
-  border-radius: var-radius-full;
+  border-radius: var(--radius-full);
 }
 
 .badge-success {

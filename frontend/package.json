@@ -17,7 +17,10 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "autoprefixer": "^10.4.19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.11"
+    "eslint-config-next": "16.2.11",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.4.4"
   }
 }
