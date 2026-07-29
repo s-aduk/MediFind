@@ -6,10 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "lint": "eslint"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.15.4",
@@ -20,27 +17,9 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.4.0",
-    "@testing-library/react": "^14.2.0",
-    "@testing-library/user-event": "^14.5.0",
-    "@types/jest": "^29.5.0",
-    "autoprefixer": "^10.4.19",
+    "@tailwindcss/postcss": "^4.3.3",
     "eslint": "^9",
     "eslint-config-next": "16.2.11",
-    "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0",
-    "postcss": "^8.4.31",
-    "tailwindcss": "^3.4.4"
-  },
-  "jest": {
-    "testEnvironment": "jsdom",
-    "setupFilesAfterSetup": ["<rootDir>/jest.setup.js"],
-    "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
-    },
-    "testPathIgnorePatterns": ["<rootDir>/.next/", "<rootDir>/node_modules/"],
-    "transform": {
-      "^.+\\.(js|jsx|ts|tsx)$": ["babel-jest", { "presets": ["next/babel"] }]
-    }
+    "tailwindcss": "^4.3.3"
   }
 }
