@@ -3,6 +3,12 @@
 import { useState } from 'react';
 import { signIn, signUp, confirmSignUp } from '../lib/auth';
 
+const inputClass =
+  'w-full px-4 py-3 bg-ivory-dim border border-pine-soft rounded-xl focus:outline-none focus:ring-2 focus:ring-pine focus:border-pine transition-all';
+const labelClass = 'block text-sm font-medium text-ink mb-2';
+const primaryButtonClass =
+  'w-full bg-pine text-ivory px-6 py-3 rounded-full font-medium hover:bg-pine-light transition-colors disabled:opacity-60';
+
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,13 +66,16 @@ export default function Login({ onLogin }) {
 
   if (showVerification) {
     return (
-      <div className="max-w-md mx-auto mt-14 bg-white rounded-xl shadow-lg p-8 space-y-6">
-        <h2 className="text-2xl font-bold text-gray-900 text-center">Verify Your Email</h2>
-        <p className="text-gray-600 text-center mb-4">A verification code was sent to {tempEmail}</p>
-        <form onSubmit={handleVerify} className="space-y-4">
+      <div className="max-w-md mx-auto mt-14 bg-white rounded-2xl shadow-lifted border border-pine-soft/60 p-8 space-y-6">
+        <div className="text-center">
+          <p className="font-mono text-xs uppercase tracking-widest text-clay mb-2">Almost there</p>
+          <h2 className="font-display text-2xl font-medium text-pine">Verify your email</h2>
+          <p className="text-ink-soft mt-2">A verification code was sent to {tempEmail}</p>
+        </div>
+        <form onSubmit={handleVerify} className="space-y-5">
           <div>
-            <label htmlFor="verificationCode" className="block text-sm font-medium text-gray-700 mb-2">
-              Verification Code
+            <label htmlFor="verificationCode" className={labelClass}>
+              Verification code
             </label>
             <input
               id="verificationCode"
@@ -74,21 +83,17 @@ export default function Login({ onLogin }) {
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value)}
               placeholder="Enter verification code"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+              className={`${inputClass} font-mono tracking-widest`}
               required
             />
           </div>
           {error && (
-            <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+            <div className="bg-brick-soft border-l-4 border-brick text-brick p-4 rounded-r-lg" role="alert">
               <p className="font-medium">{error}</p>
             </div>
           )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-green-600 to-green-400 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity shadow-lg transform hover:-translate-y-1 flex items-center justify-center space-x-2"
-          >
-            {loading ? 'Verifying...' : 'Verify Email'}
+          <button type="submit" disabled={loading} className={primaryButtonClass}>
+            {loading ? 'Verifying...' : 'Verify email'}
           </button>
         </form>
       </div>
@@ -96,15 +101,18 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div className="max-w-md mx-auto mt-14 bg-white rounded-xl shadow-lg p-8 space-y-6">
-      <h2 className="text-2xl font-bold text-gray-900 text-center">
-        {isSignUp ? 'Create Account' : 'Welcome Back'}
-      </h2>
+    <div className="max-w-md mx-auto mt-14 bg-white rounded-2xl shadow-lifted border border-pine-soft/60 p-8 space-y-6">
+      <div className="text-center">
+        <p className="font-mono text-xs uppercase tracking-widest text-clay mb-2">MediFind</p>
+        <h2 className="font-display text-2xl font-medium text-pine">
+          {isSignUp ? 'Create your account' : 'Welcome back'}
+        </h2>
+      </div>
       <form onSubmit={handleSubmit} className="space-y-5">
         {isSignUp && (
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name
+            <label htmlFor="name" className={labelClass}>
+              Full name
             </label>
             <input
               id="name"
@@ -112,14 +120,14 @@ export default function Login({ onLogin }) {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter your full name"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+              className={inputClass}
               required
             />
           </div>
         )}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address
+          <label htmlFor="email" className={labelClass}>
+            Email address
           </label>
           <input
             id="email"
@@ -127,12 +135,12 @@ export default function Login({ onLogin }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+            className={inputClass}
             required
           />
         </div>
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="password" className={labelClass}>
             Password
           </label>
           <input
@@ -141,34 +149,30 @@ export default function Login({ onLogin }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Create a strong password"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+            className={inputClass}
             required
             minLength="8"
           />
         </div>
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+          <div className="bg-brick-soft border-l-4 border-brick text-brick p-4 rounded-r-lg" role="alert">
             <p className="font-medium">{error}</p>
           </div>
         )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-gradient-to-r from-green-600 to-green-400 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity shadow-lg transform hover:-translate-y-1 flex items-center justify-center space-x-2"
-        >
-          {loading ? 'Processing...' : isSignUp ? 'Create Account' : 'Sign In'}
+        <button type="submit" disabled={loading} className={primaryButtonClass}>
+          {loading ? 'Processing...' : isSignUp ? 'Create account' : 'Sign in'}
         </button>
       </form>
-      <div className="text-center text-sm text-gray-600">
+      <div className="text-center text-sm text-ink-soft">
         {isSignUp ? 'Already have an account?' : "Don't have an account?"}
         <button
           onClick={() => {
             setIsSignUp(!isSignUp);
             setError('');
           }}
-          className="font-medium text-green-600 hover:text-green-500 ml-1"
+          className="font-medium text-pine hover:text-pine-light ml-1.5"
         >
-          {isSignUp ? 'Sign In' : 'Create Account'}
+          {isSignUp ? 'Sign in' : 'Create account'}
         </button>
       </div>
     </div>

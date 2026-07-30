@@ -14,7 +14,7 @@ function LoginPageContent() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10">
+    <main className="min-h-screen bg-mist/60 px-4 py-10">
       <Login onLogin={handleLogin} />
     </main>
   );

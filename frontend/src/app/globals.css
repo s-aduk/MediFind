@@ -1,9 +1,66 @@
 @import "tailwindcss";
 
-:root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/*
+  MediFind design tokens - "modern apothecary"
+  Calm, clinical, precise. Deep pine green anchors trust; warm ivory keeps it
+  human rather than sterile; clay (prescription-amber) carries stock/status
+  meaning, never used alone without a text label alongside it.
+*/
+@theme {
+  --color-ivory: #faf7f0;
+  --color-ivory-dim: #f2ede1;
+  --color-pine: #16322a;
+  --color-pine-light: #2f5645;
+  --color-pine-soft: #dde6df;
+  --color-sage: #6b8a78;
+  --color-mist: #e7ebe2;
+  --color-ink: #1e2420;
+  --color-ink-soft: #52605a;
+  --color-clay: #b0703f;
+  --color-clay-soft: #ecd9c3;
+  --color-brick: #a13d3d;
+  --color-brick-soft: #f1dcdc;
+
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  --shadow-card: 0 1px 2px rgba(22, 50, 42, 0.04), 0 8px 24px -12px rgba(22, 50, 42, 0.18);
+  --shadow-lifted: 0 4px 8px rgba(22, 50, 42, 0.06), 0 16px 32px -16px rgba(22, 50, 42, 0.28);
 }
 
 body {
+  background-color: var(--color-ivory);
+  color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* Visible, on-brand focus ring for every interactive element - accessibility
+   floor, not optional polish. */
+:focus-visible {
+  outline: 2px solid var(--color-pine);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(22, 50, 42, 0.16); }
+  100% { box-shadow: 0 0 0 12px rgba(22, 50, 42, 0); }
+}
+
+.pulse-ring {
+  animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-ring { animation: none; }
 }
