@@ -1,5 +1,5 @@
 // Use the environment variable (or fallback to hardcoded for local testing)
-const RAW_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://to23iirip3.execute-api.eu-north-1.amazonaws.com/Prod/';
+const RAW_API_BASE = (process.env.NEXT_PUBLIC_API_URL || 'https://to23iirip3.execute-api.eu-north-1.amazonaws.com/Prod/').trim();
 
 // Ensure a trailing slash so `new URL(path, API_BASE)` appends rather than
 // replacing the last path segment (e.g. the API Gateway stage name).
