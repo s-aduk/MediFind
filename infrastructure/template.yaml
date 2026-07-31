@@ -281,7 +281,7 @@ Resources:
           EmailMessage: 'Your username is {username} and temporary password is {####}.'
           SMSMessage: 'Your username is {username} and temporary password is {####}.'
       EmailVerificationSubject: Welcome to MediFind
-      EmailVerificationMessage: 'Thanks for signing up to MediFind! Your username is {username}'
+      EmailVerificationMessage: 'Thanks for signing up to MediFind! Your verification code is {####}'
       UserPoolTags:
         Environment: !Ref EnvironmentName
         Application: MedicFind
