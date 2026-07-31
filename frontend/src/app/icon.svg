@@ -1,0 +1,37 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="greenGradient" x1="96" y1="64" x2="416" y2="448" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2F6B4F"/>
+      <stop offset="100%" stop-color="#1B4D3E"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Main M -->
+  <path
+    d="M120 392V224C120 210 131 200 144 200C153 200 161 204 166 212L256 332L346 212C351 204 359 200 368 200C381 200 392 210 392 224V392H352V282L274 385C270 391 263 394 256 394C249 394 242 391 238 385L160 282V392H120Z"
+    fill="url(#greenGradient)"
+  />
+
+  <!-- Map Pin -->
+  <path
+    d="M256 56C191 56 140 107 140 172C140 249 256 334 256 334C256 334 372 249 372 172C372 107 321 56 256 56Z"
+    fill="url(#greenGradient)"
+  />
+
+  <!-- Medical Cross -->
+  <rect x="236" y="120" width="40" height="104" rx="8" fill="#F8F6F0"/>
+  <rect x="204" y="152" width="104" height="40" rx="8" fill="#F8F6F0"/>
+
+  <!-- Leaf -->
+  <path
+    d="M282 212C317 198 347 211 364 238C336 242 312 261 302 288C281 271 275 240 282 212Z"
+    fill="#76B07D"
+  />
+
+  <path
+    d="M305 280C316 255 336 239 360 235"
+    stroke="#F8F6F0"
+    stroke-width="4"
+    stroke-linecap="round"
+  />
+</svg>

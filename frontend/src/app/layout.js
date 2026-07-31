@@ -3,15 +3,28 @@ import './globals.css';
 export const metadata = {
   title: 'MediFind',
   description: 'Find and order medicine near you',
-  icons: {
-    icon: '/favicon.ico',
-  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="antialiased">
+    <html lang="en" className="antialiased" suppressHydrationWarning>
       <head>
+        {/* Runs before first paint so the correct theme class is set on <html>
+            before React hydrates - this is what prevents a light/dark flash
+            on load. Reads the stored preference if the user has toggled
+            before, otherwise falls back to the OS-level preference. */}
+        <script
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+              try {
+                var stored = localStorage.getItem('medifind-theme');
+                var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+                if (theme === 'dark') document.documentElement.classList.add('dark');
+              } catch (e) {}
+            })();`,
+          }}
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font -- this rule targets

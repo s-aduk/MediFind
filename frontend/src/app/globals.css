@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Enables `dark:` utilities to respond to a `.dark` class on <html> (toggled
+   by ThemeToggle.js) instead of only the OS-level media query. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
   MediFind design tokens - "modern apothecary"
   Calm, clinical, precise. Deep pine green anchors trust; warm ivory keeps it
@@ -29,10 +33,111 @@
   --shadow-lifted: 0 4px 8px rgba(22, 50, 42, 0.06), 0 16px 32px -16px rgba(22, 50, 42, 0.28);
 }
 
+/* Dark mode: same apothecary palette, inverted for a dim dispensary-at-night
+   feel rather than a generic black SaaS theme. Pine becomes the light ink,
+   ivory becomes a near-black backdrop with a faint green cast.
+   Applied via .dark (toggled manually) - the inline script in layout.js
+   sets this class on first load based on a stored preference or, absent
+   one, the OS-level prefers-color-scheme. */
+.dark {
+  --color-ivory: #0e1613;
+  --color-ivory-dim: #131e19;
+  --color-pine: #eef5f0;
+  --color-pine-light: #cfe3d6;
+  --color-pine-soft: #24352c;
+  --color-sage: #8fb39d;
+  --color-mist: #17251e;
+  --color-ink: #eef2ef;
+  --color-ink-soft: #93a49b;
+  --color-clay: #e3a877;
+  --color-clay-soft: #2e2115;
+  --color-brick: #e28a8a;
+  --color-brick-soft: #331a1a;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  --shadow-lifted: 0 4px 8px rgba(0, 0, 0, 0.35), 0 16px 40px -16px rgba(0, 0, 0, 0.6);
+}
+
 body {
   background-color: var(--color-ivory);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* ---------------------------------------------------------------------- */
+/* Glassmorphism + ambient-glow primitives shared by the search + results   */
+/* surfaces. Kept as reusable utilities rather than one-off component CSS. */
+/* ---------------------------------------------------------------------- */
+
+.glass-panel {
+  background-color: color-mix(in oklab, var(--color-ivory) 62%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-pine) 12%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.glass-card {
+  background-color: color-mix(in oklab, var(--color-ivory) 72%, transparent);
+  border: 1px solid color-mix(in oklab, var(--color-pine) 14%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Soft, blurred color field that sits behind the search bar. Two blobs in
+   the brand's pine + clay tones, never a generic purple/blue SaaS glow. */
+.ambient-glow {
+  position: absolute;
+  inset: -60px;
+  z-index: -1;
+  pointer-events: none;
+  filter: blur(48px);
+  opacity: 0.55;
+  background:
+    radial-gradient(closest-side, color-mix(in oklab, var(--color-pine) 35%, transparent), transparent),
+    radial-gradient(closest-side, color-mix(in oklab, var(--color-clay) 30%, transparent), transparent) 70% 30%;
+  background-size: 60% 60%, 50% 50%;
+  background-repeat: no-repeat;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.55; }
+}
+
+.breathing-dot {
+  position: relative;
+}
+
+.breathing-dot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -120% 0; }
+  100% { background-position: 220% 0; }
+}
+
+.skeleton-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in oklab, var(--color-pine) 8%, transparent) 30%,
+    color-mix(in oklab, var(--color-pine) 16%, transparent) 50%,
+    color-mix(in oklab, var(--color-pine) 8%, transparent) 70%
+  );
+  background-size: 250% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breathing-dot::after,
+  .skeleton-shimmer {
+    animation: none;
+  }
 }
 
 /* Visible, on-brand focus ring for every interactive element - accessibility
