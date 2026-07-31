@@ -543,6 +543,7 @@ Resources:
       EndpointConfiguration: REGIONAL
       Auth:
         DefaultAuthorizer: JwtAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
         Authorizers:
           JwtAuthorizer:
             FunctionArn: !GetAtt JwtAuthorizerFunction.Arn
@@ -568,6 +569,47 @@ Resources:
       Tags:
         Environment: !Ref EnvironmentName
         Application: MedicFind
+
+  # Gateway Responses - without these, any request rejected by the
+  # JwtAuthorizer (expired/invalid/missing token) or an unmatched route
+  # returns a response with NO CORS headers. The browser then reports this
+  # as an opaque "Failed to fetch" / CORS error, hiding the real 401/403/404
+  # reason from both the console and the app's own error handling.
+  UnauthorizedGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: UNAUTHORIZED
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+
+  AccessDeniedGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: ACCESS_DENIED
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+
+  Default4xxGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: DEFAULT_4XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+
+  Default5xxGatewayResponse:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref ApiGateway
+      ResponseType: DEFAULT_5XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
 
   # CloudWatch Log Groups for better retention
   MedicineSearchLogGroup:
