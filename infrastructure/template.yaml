@@ -435,7 +435,6 @@ Resources:
       Environment:
         Variables:
           PHARMACIES_TABLE: !Ref PharmaciesTable
-          USERS_TABLE: !Ref UsersTable
           POWERTOOLS_SERVICE_NAME: medifind
           POWERTOOLS_METRICS_NAMESPACE: Medifind
           POWERTOOLS_LOG_LEVEL: INFO
@@ -451,7 +450,6 @@ Resources:
                 - dynamodb:Scan
               Resource:
                 - !GetAtt PharmaciesTable.Arn
-                - !GetAtt UsersTable.Arn
       Events:
         AdminPharmacy:
           Type: Api
@@ -474,7 +472,6 @@ Resources:
         Variables:
           INVENTORY_TABLE: !Ref InventoryTable
           PHARMACIES_TABLE: !Ref PharmaciesTable
-          USERS_TABLE: !Ref UsersTable
           POWERTOOLS_SERVICE_NAME: medifind
           POWERTOOLS_METRICS_NAMESPACE: Medifind
           POWERTOOLS_LOG_LEVEL: INFO
@@ -491,7 +488,6 @@ Resources:
               Resource:
                 - !GetAtt InventoryTable.Arn
                 - !GetAtt PharmaciesTable.Arn
-                - !GetAtt UsersTable.Arn
       Events:
         AdminInventory:
           Type: Api

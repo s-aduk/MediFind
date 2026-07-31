@@ -4,44 +4,41 @@
 Accepted
 
 ## Context
-We needed to structure our backend services for maintainability, scalability, and clear ownership. Options considered:
+We needed to structure the backend for maintainability and clear ownership per capability. Options considered:
 - Monolithic Lambda function handling all endpoints
 - Microservices with multiple Lambda functions per entity
 - Lambda functions grouped by business capability/bounded context
 - Step Functions orchestrating multiple Lambda functions
 
 ## Decision
-Chose Lambda function per bounded context because:
-- Provides clear separation of concerns (each function has a single responsibility)
-- Enables independent scaling based on workload patterns
-- Reduces blast radius of failures
-- Allows different teams to own different functions
+Chose one Lambda function per bounded context because:
+- Clear separation of concerns - each function has a single responsibility
+- Reduces blast radius of failures (a bug in inventory management can't take down search)
 - Simplifies testing and deployment (smaller units of change)
-- Matches our domain-driven design approach
+- Matches the actual access-pattern boundaries in the DynamoDB design (see 0002) - each function typically only needs access to one or two tables
 
 ## Bounded Contexts Identified
-1. **Medicine Search**: Handles searching for medicines across pharmacies
-2. **Pharmacy Lookup**: Returns pharmacy details for given medicines
-3. **Order Management**: Handles creating and managing customer orders
-4. **Admin Pharmacy**: CRUD operations for pharmacy management
-5. **Admin Inventory**: Inventory stock management and alerts
-6. **Authorization**: JWT validation for secure API access
+1. **Medicine Search**: `GET /search` - searches Inventory, enriches with Pharmacies
+2. **Pharmacy Lookup**: `GET /pharmacies/{medicineName}` - same two tables, different access pattern
+3. **Order Management**: `POST /orders` - Orders, Users, Inventory (stock check + decrement), Pharmacies (existence check)
+4. **Admin Pharmacy**: `ANY /admin/pharmacies` - Pharmacies CRUD, admin-role gated
+5. **Admin Inventory**: `ANY /admin/inventory` - Inventory CRUD, admin-role gated
+6. **Authorization**: JWT validation, wired as a native API Gateway REQUEST authorizer - attaches caller identity (`userId`, `email`, `role`) to the request context for the other 5 functions to trust
 
 ## Implementation Details
-- Each function has its own package.json for precise dependency control
-- Shared utilities extracted to common layers where beneficial
-- Each function follows consistent error handling and response patterns
-- Functions are kept under 50MB deployment package size through careful dependency management
-- Environment variables used for configuration rather than hardcoded values
+- Each function has its own `package.json` and its own `node_modules` after `sam build` - no shared Lambda Layer exists between functions currently, despite that being a reasonable option to revisit if duplicated dependencies become a real maintenance cost
+- Each function's IAM policy is scoped to only the tables its own code actually reads/writes - this has been verified by inspection more than once, including catching and fixing two functions that held unused table access they never needed (see `FIXES.md`)
+- Environment variables (table names, Cognito IDs) are injected via the SAM template, never hardcoded
+- No provisioned concurrency is configured on any function - cold starts are accepted as-is at current scale
+- Only 3 of the 6 functions (`medicine-search`, `get-pharmacies`, `create-order`) currently have automated tests
 
 ## Consequences
-- Increased operational overhead (more functions to monitor, deploy, manage)
-- Potential for cold start latency (mitigated with provisioned concurrency where needed)
-- Need for consistent coding standards across functions
-- Slightly more complex initial setup but better long-term maintainability
-- Requires careful attention to shared dependencies and versioning
+- More functions to monitor/deploy/manage than a monolith would have
+- Cold start latency exists and is unmitigated - acceptable at current traffic levels, worth revisiting (provisioned concurrency, or consolidating low-traffic functions) if that changes
+- No shared code layer means small amounts of duplication across functions (e.g. CORS header construction is repeated per-function rather than centralized)
+- Requires discipline to keep each function's granted IAM permissions matched to what its code actually does, since nothing enforces this automatically
 
 ## Related Decisions
-- 0002: Works well with DynamoDB design as each function accesses specific entities
-- 0004: Complements Cognito-based authentication strategy
-- Infrastructure: SAM template makes managing multiple functions straightforward
+- 0002: DynamoDB multi-table design - each function accesses only the tables its bounded context needs
+- 0004: Complements Cognito-based authentication - one function owns all JWT validation
+- 0001: SAM template makes managing 6 functions in one place straightforward

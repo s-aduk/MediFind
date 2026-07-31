@@ -29,16 +29,21 @@ Initiate rollback if ANY of the following are true:
 ### Scenario A: Simple Code/Rollback (No Schema Changes)
 Applies when deployment only changed Lambda code or configuration without altering DynamoDB schema.
 
-#### Backend (SAM/CloudFormation) Rollback:
+#### Steps:
 ```bash
 # 1. Identify previous deployment
 STACK_NAME=medifind-production  # or staging
-AWS_PROFILE=mediFind-production
+AWS_PROFILE=medifind-production
 
-# 2. Re-deploy previous template (if saved)
+# Get previous template (only applies if you're using `sam package` with a manually-created
+# artifacts bucket, rather than plain `sam deploy --guided`, which manages its own bucket)
+aws s3 ls s3://medifind-deployments-${AWS_PROFILE#medifind-}/artifacts/ \
+    --recursive | sort | tail -5
+
+# 2. If you saved the packaged template from previous deploy:
 aws cloudformation update-stack \
     --stack-name $STACK_NAME \
-    --template-body file:///path/to/previous/template.yaml \
+    --template-body file:///path/to/previous/packaged.yaml \
     --capabilities CAPABILITY_IAM \
     --region $(aws configure get region --profile $AWS_PROFILE) \
     --profile $AWS_PROFILE
@@ -50,37 +55,19 @@ aws cloudformation describe-stacks \
     --profile $AWS_PROFILE
 ```
 
-#### Frontend (Amplify) Rollback:
-```bash
-# Option 1: Via Amplify Console (recommended)
-# 1. Open Amplify Console → App → Branch
-# 2. Click "Redeploy" on a previous successful build
-# 3. Or use "Rollback" to any prior deployment
+### Scenario B: Rollback with API Gateway Changes
+If API routes, methods, or the authorizer wiring changed:
+1. CloudFormation will revert API Gateway resources to previous state as part of the stack rollback
+2. Custom domains (not currently configured for this project) would need extra verification if added later
+3. This project does not use API Gateway canary/stage-variable traffic splitting - a rollback here is a full stack rollback, not a gradual traffic shift
 
-# Option 2: Via Git (revert commit)
-git revert <bad-commit-hash>
-git push origin main  # Triggers Amplify auto-deploy
-```
-
-### Scenario B: Rollback with Lambda Layers or Dependencies Changed
-If deployment updated Lambda layers or dependencies:
-1. Ensure previous layer versions are still available (Lambda versions are immutable)
-2. Point function configurations back to previous layer versions
-3. The CloudFormation update should handle this automatically if template references are correct
-
-### Scenario C: Rollback with API Gateway Changes
-If API routes, methods, or stage variables changed:
-1. CloudFormation will revert API Gateway resources to previous state
-2. Be aware that stage variables or custom domains may require additional steps
-3. If using canary deployments, promote the previous stage to 100%
-
-### Scenario D: Rollback with Cognito Changes
+### Scenario C: Rollback with Cognito Changes
 If user pools, clients, or authentication flows changed:
 1. Exercise caution - rolling back Cognito resources may affect user sessions
 2. Consider whether rolling back might break existing user tokens
 3. May require coordination with users to re-authenticate after rollback
 
-### Scenario E: Rollback with Database Schema Changes
+### Scenario D: Rollback with Database Schema Changes
 **High Risk**: Only attempt if you understand the data implications.
 
 #### If the change was ADDITIVE only (adding new tables/columns):
@@ -117,9 +104,10 @@ aws cloudformation get-template \
     --profile $AWS_PROFILE > current-template.json
 
 # Download logs from affected Lambda functions
-# (Repeat for each suspect function)
+# Function names follow the pattern ${EnvironmentName}-<function-name>, e.g.
+# staging-medicine-search, prod-create-order - not "medifind-<stack>-medicineSearch"
 aws logs filter-log-events \
-    --log-group-name /aws/lambda/medifind-${STACK_NAME}-medicineSearch \
+    --log-group-name /aws/lambda/${ENVIRONMENT_NAME}-medicine-search \
     --start-time $(date -d '10 minutes ago' +%s)000 \
     --profile $AWS_PROFILE > medicine-search.log
 ```
@@ -217,7 +205,7 @@ After successful rollback, you may need to manually clean up resources that were
 
 ## Prevention Strategies
 To reduce need for rollbacks:
-1. **Implement Canary Deployments**: Use API Gateway canary settings or Lambda aliases
+1. **Canary Deployments**: Not currently configured for this project (API Gateway canary settings or Lambda aliases would need to be added) - worth considering if rollback frequency becomes a real problem
 2. **Feature Flags**: Wrap new features in toggles that can be disabled instantly
 3. **Blue/Green Deployments**: For critical services, maintain two identical environments
 4. **Automated Rollback Alarms**: Configure CloudWatch alarms to trigger automatic rollback
@@ -233,6 +221,7 @@ To reduce need for rollbacks:
 6. **Customer Communication**: If users were affected, prepare appropriate notifications and possibly offer compensation
 
 ## Contacts for Escalation
+_(Placeholder - replace with your actual team's real contacts; nothing below is a real MediFind team/channel)_
 - Primary: Platform Engineering Team (#platform-engineering slack)
 - Secondary: DevOps Lead (escalate@medifind.example.com)
 - Emergency: AWS Account Team (if service limit issues suspected)

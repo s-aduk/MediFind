@@ -2,204 +2,121 @@
 
 ## When to Use
 - Initial environment setup (dev, staging, production)
-- Resetting test data after development cycles
-- Populating reference data (medicines, pharmacy locations)
-- Recovering from data loss scenarios
-- Setting up demo environments for presentations or training
+- Resetting sample data after development cycles
+- Setting up demo environments
 
 ## Prerequisites
 - AWS CLI configured with appropriate permissions for the target environment
-- Python 3.8+ installed
-- `boto3` library installed (`pip install boto3`)
-- Access to DynamoDB tables in the target environment
-- Understanding of the data model (PK/SK structure, GSIs)
+- Python >= 3.9
+- `boto3` installed (`pip install boto3`)
+- Access to the target environment's DynamoDB tables
 
 ## Safety Considerations
-⚠️ **IMPORTANT**: This procedure will WRITE data to DynamoDB tables.
-- **Never** run against production without explicit approval
-- Always verify you're targeting the correct environment (check AWS_PROFILE)
-- Consider using DynamoDB Local or a dedicated dev/test environment for development work
-- For production reseeding, coordinate with product team as this may affect live data
+**This procedure WRITES data to DynamoDB tables.**
+- Always verify you're targeting the correct environment (check `AWS_REGION`/`ENVIRONMENT_NAME` before running)
+- Running this against a production stack with real data will overwrite any of its own sample records if they happen to already exist there (same primary keys) - it will not touch unrelated data, but don't run it against production casually
 
 ## Environment Setup
-Set these variables based on your target environment:
+The script reads its target from environment variables, not CLI flags:
 ```bash
-# For Development
-export AWS_PROFILE=mediFind-dev
-export AWS_REGION=us-east-1
-
-# For Staging  
-export AWS_PROFILE=mediFind-staging
-export AWS_REGION=us-east-1
-
-# For Production (USE WITH EXTREME CAUTION)
-# export AWS_PROFILE=mediFind-production
-# export AWS_REGION=us-east-1
+export ENVIRONMENT_NAME=dev       # must match the EnvironmentName you deployed with - default is 'dev'
+export AWS_REGION=us-east-1       # must match your deploy region - default is 'us-east-1'
+```
+Table names are derived as `${ENVIRONMENT_NAME}-pharmacies` and `${ENVIRONMENT_NAME}-inventory` - if these don't match what you actually deployed, you'll get a `ResourceNotFoundException`. Check with:
+```bash
+aws cloudformation describe-stacks --stack-name <your-stack> \
+  --query "Stacks[0].Outputs[?OutputKey=='PharmaciesTableName' || OutputKey=='InventoryTableName']"
 ```
 
 ## Seeding Script Location
-The seeding script is located at: `backend/seed_data.py`
+`backend/seed_data.py`
 
-## Seeding Process Overview
-The script seeds two main entities:
-1. **Pharmacies**: 5 sample pharmacies with contact information
-2. **Inventory**: Medicine stock levels across the pharmacies (10 medicine-pharmacy combinations)
+## What It Seeds
+1. **Pharmacies**: 5 sample pharmacies (`PHARMACY_01` through `PHARMACY_05`) with name, phone, and address
+2. **Inventory**: 20 rows across **10 medicines**, 2 pharmacies each, with realistic prices and a deliberate mix of stock levels (including a couple at 0 and a couple in single digits, so the UI's in-stock/low-stock/out-of-stock states have something to show)
 
 ## Step-by-Step Procedure
 
-### 1. Verify Environment Target
+### 1. Verify environment target
 ```bash
-# Check which AWS profile/configuration you're using
 aws sts get-caller-identity --profile $AWS_PROFILE
 
-# List tables to confirm you can access the right environment
-aws dynamodb list-tables --profile $AWS_PROFILE --query "TableNames[?contains(@, 'Pharmacies') || contains(@, 'Inventory')]"
+aws dynamodb list-tables --profile $AWS_PROFILE \
+  --query "TableNames[?contains(@, '${ENVIRONMENT_NAME}-pharmacies') || contains(@, '${ENVIRONMENT_NAME}-inventory')]"
 ```
 
-### 2. Optional: Clear Existing Data (Dev/Staging Only)
-⚠️ **Only do this in development or staging environments!**
-
-```bash
-# WARNING: This DELETEs ALL data from the tables
-# Only run if you explicitly want to start fresh
-
-# Clear Pharmacies table
-aws dynamodb scan \
-    --table-name Pharmacies \
-    --profile $AWS_PROFILE \
-    --query "Items[].pharmacy_id" \
-    --output text |
-while read pharmacy_id; do
-    if [ -n "$pharmacy_id" ]; then
-        aws dynamodb delete-item \
-            --table-name Pharmacies \
-            --key '{"pharmacy_id":{"S":"'$pharmacy_id'"}}' \
-            --profile $AWS_PROFILE
-    fi
-done
-
-# Clear Inventory table  
-aws dynamodb scan \
-    --table-name Inventory \
-    --profile $AWS_PROFILE \
-    --query "Items[].medicine_name,Items[].pharmacy_id" \
-    --output text |
-while read medicine_name pharmacy_id; do
-    if [ -n "$medicine_name" ] && [ -n "$pharmacy_id" ]; then
-        aws dynamodb delete-item \
-            --table-name Inventory \
-            --key '{"medicine_name":{"S":"'$medicine_name'"},"pharmacy_id":{"S":"'$pharmacy_id'"}}' \
-            --profile $AWS_PROFILE
-    fi
-done
-```
-
-### 3. Run the Seeding Script
+### 2. Run the seeding script
 ```bash
 cd backend
-python seed_data.py
+python3 seed_data.py
 ```
+Output confirms how many pharmacies/inventory rows/distinct medicines were written.
 
-### 4. Verify Seeding Results
+### 3. Verify results
 ```bash
-# Check pharmacy count
-aws dynamodb scan \
-    --table-name Pharmacies \
-    --select COUNT \
-    --profile $AWS_PROFILE
+aws dynamodb scan --table-name ${ENVIRONMENT_NAME}-pharmacies --select COUNT --profile $AWS_PROFILE
+aws dynamodb scan --table-name ${ENVIRONMENT_NAME}-inventory --select COUNT --profile $AWS_PROFILE
 
-# Check inventory count
-aws dynamodb scan \
-    --table-name Inventory \
-    --select COUNT \
-    --profile $AWS_PROFILE
-
-# Sample data verification
-echo "Sample Pharmacy Data:"
 aws dynamodb get-item \
-    --table-name Pharmacies \
+    --table-name ${ENVIRONMENT_NAME}-pharmacies \
     --key '{"pharmacy_id":{"S":"PHARMACY_01"}}' \
     --profile $AWS_PROFILE
 
-echo "Sample Inventory Data:"
 aws dynamodb get-item \
-    --table-name Inventory \
+    --table-name ${ENVIRONMENT_NAME}-inventory \
     --key '{"medicine_name":{"S":"paracetamol"},"pharmacy_id":{"S":"PHARMACY_01"}}' \
     --profile $AWS_PROFILE
 ```
 
-## Seeding Script Details
-The `backend/seed_data.py` script contains hardcoded sample data:
+## Current Seed Data (as of the last update to `seed_data.py`)
 
-**Pharmacies Sample Data:**
-- PHARMACY_01: Meds Pharmacy, Nairobi
-- PHARMACY_02: Health Chemist, Westlands  
-- PHARMACY_03: Life Pharmacy, Kilimani
-- PHARMACY_04: Metro Meds, Eastleigh
-- PHARMACY_05: Apex Chemist, Upperhill
+**Pharmacies**: PHARMACY_01 (Meds Pharmacy), PHARMACY_02 (Health Chemist), PHARMACY_03 (Life Pharmacy), PHARMACY_04 (Metro Meds), PHARMACY_05 (Apex Chemist)
 
-**Inventory Sample Data:**
-- Penicillin: 50 units @ PHARMACY_01, 12 units @ PHARMACY_02
-- Paracetamol: 100 units @ PHARMACY_01, 0 units @ PHARMACY_03 (out of stock)
-- Ibuprofen: 30 units @ PHARMACY_02, 25 units @ PHARMACY_04
-- Cetirizine: 15 units @ PHARMACY_03, 40 units @ PHARMACY_05
-- Metformin: 60 units @ PHARMACY_04, 5 units @ PHARMACY_05
+**Inventory** (medicine | pharmacy | quantity | price):
+| Medicine | Pharmacy | Qty | Price |
+|---|---|---|---|
+| penicillin | PHARMACY_01 | 50 | $8.50 |
+| penicillin | PHARMACY_02 | 12 | $9.00 |
+| paracetamol | PHARMACY_01 | 100 | $3.25 |
+| paracetamol | PHARMACY_03 | 0 (out of stock) | $3.50 |
+| ibuprofen | PHARMACY_02 | 30 | $4.75 |
+| ibuprofen | PHARMACY_04 | 25 | $4.50 |
+| cetirizine | PHARMACY_03 | 15 | $6.00 |
+| cetirizine | PHARMACY_05 | 40 | $5.75 |
+| metformin | PHARMACY_04 | 60 | $7.25 |
+| metformin | PHARMACY_05 | 5 | $7.60 |
+| amoxicillin | PHARMACY_01 | 45 | $10.20 |
+| amoxicillin | PHARMACY_03 | 8 | $10.80 |
+| omeprazole | PHARMACY_02 | 22 | $12.00 |
+| omeprazole | PHARMACY_05 | 0 (out of stock) | $12.50 |
+| atorvastatin | PHARMACY_01 | 33 | $14.90 |
+| atorvastatin | PHARMACY_04 | 18 | $15.25 |
+| azithromycin | PHARMACY_02 | 6 | $18.00 |
+| azithromycin | PHARMACY_03 | 27 | $17.50 |
+| loratadine | PHARMACY_04 | 50 | $5.10 |
+| loratadine | PHARMACY_05 | 14 | $5.40 |
+
+This table will go stale if `seed_data.py` is edited again without updating this doc - treat it as a snapshot, and check the actual file if in doubt.
 
 ## Customizing Seed Data
-To modify the seed data:
 1. Edit `backend/seed_data.py`
-2. Modify the `pharmacies` and `inventory` arrays
-3. Ensure medicine names match what your search functionality expects
-4. Consider adding more realistic data patterns for testing
-
-## Automation Options
-For regular seeding needs, consider:
-1. **CI/CD Integration**: Add a seeding step to your deployment pipeline for dev/staging
-2. **Lambda Function**: Create a Lambda function that can be invoked on demand
-3. **Step Functions Orchestration**: For complex seeding with dependencies
-4. **EventBridge Scheduling**: For periodic data refresh scenarios
+2. `medicine_name` should be lowercase - the search/lookup Lambdas do a case-sensitive substring match against pre-lowercased query terms, so mixed-case medicine names in seed data won't be found correctly
+3. **Price values must go through `Decimal(str(value))`, not a raw Python float.** boto3's DynamoDB client rejects native floats outright (`TypeError: Float types are not supported`). The script already handles this via a conversion loop after the inventory list - if you add new items, they'll be covered automatically as long as they go through that same list
 
 ## Troubleshooting
 
-### Issue: AccessDeniedException
-**Symptom**: User is not authorized to perform: dynamodb:BatchWriteItem on resource:
-**Solution**: 
-- Check IAM permissions for the AWS profile being used
-- Ensure the role/user has `dynamodb:BatchWriteItem`, `dynamodb:PutItem` on the target tables
-- Verify you're using the correct AWS_PROFILE
+### AccessDeniedException
+Check IAM permissions for the profile - needs `dynamodb:BatchWriteItem`/`dynamodb:PutItem` on the target tables.
 
-### Issue: ResourceNotFoundException
-**Symptom**: Cannot do operations on a non-existent table
-**Solution**:
-- Verify table names match those in your CloudFormation stack
-- Check that you're targeting the correct region/environment
-- Ensure infrastructure has been deployed successfully
+### ResourceNotFoundException
+Table names don't match. Most likely cause: `ENVIRONMENT_NAME` doesn't match what you actually deployed with. Check the stack outputs (see step 1 above) rather than guessing.
 
-### Issue: ProvisionedThroughputExceededException
-**Symptom**: Throughput exceeds the provisioned capacity for the table
-**Solution**:
-- For development/staging: Consider switching to on-demand billing mode temporarily
-- For production: Check if auto-scaling is configured properly
-- Reduce batch size in the seeding script if needed
-- Retry with exponential backoff
+### TypeError: Float types are not supported
+You added a new numeric field without converting it through `Decimal(str(...))` first. See "Customizing Seed Data" above.
 
-### Issue: ValidationError
-**Symptom**: Invalid key(s) provided
-**Solution**:
-- Verify your table's key schema matches what the script expects
-- Check that you're providing all required key attributes
-- Look at the actual table description: `aws dynamodb describe-table`
+## Idempotency
+Running the script multiple times is **safe and idempotent** for this data - every item uses a fixed, deterministic primary key (`pharmacy_id`, or `medicine_name`+`pharmacy_id`), and DynamoDB's `PutItem` overwrites by primary key rather than inserting a new row. Re-running won't create duplicates; it'll just rewrite the same items with the same values.
 
-## Best Practices
-1. **Environment Verification**: Always double-check AWS_PROFILE before running
-2. **Idempotency**: The current script is NOT idempotent - running twice will create duplicates
-3. **Data Backups**: Consider backing up existing data before seeding in non-dev environments
-4. **Version Control**: Keep seed data in version control to track what data represents which application version
-5. **Realistic Data**: For performance testing, consider using tools to generate larger, more realistic datasets
-6. **Clean Up**: Have a procedure to remove test data when no longer needed
-
-## Related Runbooks
-- 01-deploy-to-staging.md: Deploys infrastructure that this script interacts with
-- 02-deploy-to-production.md: Production deployment considerations
-- 05-view-logs.md: How to check CloudWatch logs if seeding fails
-- 06-troubleshoot-lambda-timeouts.md: Related to DynamoDB performance issues
+## Related
+- `01-deploy-to-staging.md` / `02-deploy-to-production.md`: deploy the infrastructure this script writes into
+- `FIXES.md`: history of what's changed in `seed_data.py` and why (originally had only 5 medicines and no prices; also originally crashed on the float/Decimal issue described above before it was caught and fixed)

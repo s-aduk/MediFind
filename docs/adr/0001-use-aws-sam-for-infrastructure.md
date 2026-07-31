@@ -12,18 +12,17 @@ We needed to define AWS infrastructure in a repeatable, version-controlled manne
 
 ## Decision
 Chose AWS SAM because:
-- Provides good abstraction over CloudFormation while still allowing escape hatches
-- Integrates well with Lambda functions (built-in SAM transforms)
-- Has good local development experience with `sam local`
-- Familiar to team (lower learning curve than CDK for simple services)
-- Less complex than Terraform for our current infrastructure scope
+- Provides good abstraction over CloudFormation while still allowing escape hatches (raw CloudFormation resources sit alongside SAM's `AWS::Serverless::*` transforms in the same template)
+- Integrates well with Lambda functions (built-in SAM transforms, native `Auth.Authorizers` wiring for API Gateway REQUEST authorizers)
+- Familiar, lower learning curve than CDK for a service of this size
+- Less complex than Terraform for the current infrastructure scope
 
 ## Consequences
 - Infrastructure changes go through CloudFormation change sets
-- Local testing requires Docker for Lambda execution
+- `sam local` requires Docker for local Lambda execution - note this isn't actually set up for this project currently (no `events/*.json` sample payloads exist), so local invocation isn't part of the current workflow despite being available
 - Limited to AWS-specific features (no multi-cloud portability)
-- SAM CLI adds another tool to learn
+- SAM CLI adds another tool to learn, on top of the AWS CLI
 
 ## Related Decisions
-- 0002: DynamoDB single-table design for entity relationships
-- 0003: Lambda function per bounded context for loose coupling
+- 0002: DynamoDB multi-table design, managed within the same SAM template
+- 0003: Lambda function per bounded context, each independently deployable via this template
