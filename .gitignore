@@ -64,6 +64,7 @@ htmlcov/
 .ucloud/
 .build/
 # Misc
+.claude/
 .env.backup
 .env.local
 .env.development
