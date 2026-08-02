@@ -110,19 +110,19 @@ flowchart LR
 | **Library** | ![React](https://img.shields.io/badge/React-19.0.0-blue?logo=react&logoColor=white&height=20) | 19.x |
 | **Styling** | ![Tailwind CSS](https://img.shields.io/badge/TailwindCSS-v4-06B6D4?logo=tailwind-css&logoColor=white&height=20) | CSS-first `@theme` config in `globals.css` + Google Fonts |
 | **Icons** | ![Lucide React](https://img.shields.io/badge/Lucide-React-blue?logo=lucide&logoColor=white&height=20) | Beautiful, consistent icon set |
-| **Auth** | ![AWS Amplify](https://img.shields.io/badge/AWS-Amplify-FF9900?logo=amazon-aws&logoColor=white&height=20) | JS library for Cognito integration |
+| **Auth** | ![AWS Amplify](https://img.shields.io/badge/AWS-Amplify-FF9900?logo=aws&logoColor=white&height=20) | JS library for Cognito integration |
 
 ### ⚙️ Backend
 | Category | Technology | Details |
 |----------|------------|---------|
 | **Compute** | ![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-FF9900?logo=awslambda&logoColor=white&height=20) | Node.js 22.x runtime |
-| **API** | ![API Gateway](https://img.shields.io/badge/API-Gateway-FF9900?logo=amazon-aws&logoColor=white&height=20) | REST API with native SAM REQUEST authorizer |
+| **API** | ![API Gateway](https://img.shields.io/badge/API-Gateway-FF9900?logo=aws&logoColor=white&height=20) | REST API with native SAM REQUEST authorizer |
 | **Database** | ![DynamoDB](https://img.shields.io/badge/DynamoDB-NoSQL-4053D6?logo=amazon-dynamodb&logoColor=white&height=20) | 4 separate tables (Pharmacies, Inventory, Users, Orders) - On-demand billing |
 | **Auth** | ![Cognito](https://img.shields.io/badge/Cognito-Auth-Purple?logo=amazon-cognito&logoColor=white&height=20) | Amazon Cognito User Pools |
 | **Infrastructure** | ![AWS SAM](https://img.shields.io/badge/AWS-SAM-FF9900?logo=aws&-logoColor=white&height=20) | AWS Serverless Application Model (CloudFormation) |
 | **Observability** | ![Lambda Powertools](https://img.shields.io/badge/Lambda-Powertools-FF9900?logo=aws&logoColor=white&height=20) | Structured logging, tracing, metrics |
-| **Tracing** | ![X-Ray](https://img.shields.io/badge/X-Ray-Tracing-FF9900?logo=amazon-aws&logoColor=white&height=20) | AWS X-Ray for distributed tracing |
-| **Logging** | ![CloudWatch](https://img.shields.io/badge/CloudWatch-Logs-FF9900?logo=amazon-aws&logoColor=white&height=20) | 30-day retention logs |
+| **Tracing** | ![X-Ray](https://img.shields.io/badge/X-Ray-Tracing-FF9900?logo=aws&logoColor=white&height=20) | AWS X-Ray for distributed tracing |
+| **Logging** | ![CloudWatch](https://img.shields.io/badge/CloudWatch-Logs-FF9900?logo=aws&logoColor=white&height=20) | 30-day retention logs |
 
 ### 🧪 Testing & Quality
 | Category | Technology | Details |
@@ -137,8 +137,8 @@ flowchart LR
 Ensure you have the following installed:
 - ![Node.js](https://img.shields.io/badge/Node.js-%3E%3D%2020.x-339933?logo=node.js&logoColor=white&height=20) >= 20.x (Lambda runtime is 22.x; keep local version close)
 - ![Python](https://img.shields.io/badge/Python-%3E%3D%203.9-3776AB?logo=python&logoColor=white&height=20) >= 3.9 (for `seed_data.py`)
-- ![AWS CLI](https://img.shields.io/badge/AWS-CLI-v2-FF9900?logo=amazon-aws&logoColor=white&height=20) v2, configured with appropriate permissions
-- ![AWS SAM](https://img.shields.io/badge/AWS-SAM-CLI-FF9900?logo=aws&-logoColor=white&height=20) CLI
+- ![AWS CLI](https://img.shields.io/badge/AWS%20CLI-v2-FF9900?logo=amazonaws&logoColor=white) v2, configured with appropriate permissions
+- ![AWS SAM](https://img.shields.io/badge/AWS%20SAM-CLI-FF9900?logo=amazonaws&logoColor=white) CLI
 - ![Git](https://img.shields.io/badge/GIT-%E2%9C%93-F05032?logo=git&logoColor=white&height=20)
 
 ### 📦 Installation
